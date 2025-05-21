@@ -6,13 +6,13 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt
 
-from ProjectState import ProjectManager
+from global_project_manager import project_manager 
 from create_project import CreateProjectWidget
 from open_project import OpenProjectWidget
 from documentation_genrt import DocumentationGenerationWidget
+from project_tree_view import ProjectFileTreeWidget
 
-# global_project_manager.py
-project_manager = ProjectManager()
+
 # from ProjectState import ProjectManager
 #this will keep track of the current opened/created project across all the files and ui
 
@@ -32,9 +32,9 @@ class MainWindow(QMainWindow):
              #a dictionary of actions is created by which we will populate the action widget
             "Create Project": self.load_create_project,
             "Open Project":   self.load_open_project,
-            "Create Documentation": self.load_doc_generator,
+            "Generate Documentation": self.load_doc_generator,
             "Review and Verify": self.load_create_project,
-            "Create Production Files": self.load_open_project,
+            "Generate Production Files": self.load_open_project,
             # Add more buttons later
         }
         self.button = {}
@@ -61,13 +61,6 @@ class MainWindow(QMainWindow):
             }
         """
 
-        # for label, func in self.actions.items():
-        #     btn = QPushButton(label)
-        #     btn.setStyleSheet(style)
-        #     btn.clicked.connect(func)
-        #     left_layout.addWidget(btn)
-        # left_layout.addStretch()
-
         for label, func in self.actions.items():
             btn = QPushButton(label)
             btn.setStyleSheet(self.normal_style)
@@ -76,6 +69,17 @@ class MainWindow(QMainWindow):
             self.button[label] = btn
             
         left_layout.addStretch()
+        
+        self.project_tree_widget = ProjectFileTreeWidget(None)
+        # Limit its height to half the parent (initially)
+        self.project_tree_widget.setMaximumHeight(self.height() // 2)
+        #left_layout.addWidget(self.project_tree_widget, alignment=Qt.AlignBottom)
+        left_layout.addWidget(self.project_tree_widget)
+        
+        
+        # Connect signal
+        project_manager.project_changed.connect(self.on_project_changed)
+                
         
         
         # Status bar with dot
@@ -101,6 +105,7 @@ class MainWindow(QMainWindow):
         self.right_box = QGroupBox("Description")
         self.right_layout = QVBoxLayout(self.right_box)
         
+        
 
         # Combine right layout
         right_panel = QVBoxLayout()
@@ -113,6 +118,24 @@ class MainWindow(QMainWindow):
         main_layout.addLayout(right_panel, 3)
 
         self.setCentralWidget(main_widget)
+    # START OF FUNTION    
+    def resizeEvent(self, event):
+        #resize theproject tree widget dynamically
+        # Adjust the maximum height of the project tree widget based on the window height
+        super().resizeEvent(event)
+        if hasattr(self, 'project_tree_widget'):
+            self.project_tree_widget.setMaximumHeight(self.height() // 2)
+    
+    #handle signal emmited on set_project in ProjectState projectstate manager
+    def on_project_changed(self, name: str, is_open: bool, path: str):
+        if is_open:
+            self.project_tree_widget.load_project(path)
+            self.project_tree_widget.repaint()
+        else:
+            self.project_tree_widget.load_project(None)
+            # self.project_tree_widget.tree_widget.clear()
+            # self.project_tree_widget.label.setText("Project Root: Not loaded")
+            
     def handle_button_click(self, clicked_button, action_function):
         # Reset previous
         if self.active_button:
@@ -136,6 +159,8 @@ class MainWindow(QMainWindow):
         self.clear_right()
         widget = CreateProjectWidget(status_dot=self.dot, status_label=self.status_label)
         self.right_layout.addWidget(widget)
+        
+        
     
     def load_open_project(self):
         self.right_box.setTitle("Open Project")
@@ -146,7 +171,11 @@ class MainWindow(QMainWindow):
         self.right_box.setTitle("Generate Documentation")
         self.clear_right()
         #get the project details i.e name and path from project_manager
-        widget = DocumentationGenerationWidget(status_dot=self.dot, status_label=self.status_label, project_name=project_manager.get_project_name, project_path=project_manager.get_project_path)
+        Namep = project_manager.get_project_name()
+        pathp = project_manager.get_project_path()
+        print(f"Namep: {Namep}")
+        print(f"pathp: {pathp}")
+        widget = DocumentationGenerationWidget(status_dot=self.dot, status_label=self.status_label, project_name=Namep, project_path=pathp)
         self.right_layout.addWidget(widget)
 
 if __name__ == "__main__":

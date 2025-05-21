@@ -108,9 +108,15 @@ class OpenProjectWidget(QWidget):
         # ✅ All checks passed: update UI
         self.dot.setStyleSheet("background-color: #2ECC71; border-radius: 6px;")
         self.status_label.setText(project_name)
-
+        #singleton function to manage state of project
         project_manager.set_project(project_name, basefolder)
         
+        print("Project set:")   
+        Namep = project_manager.get_project_name()
+        pathp = project_manager.get_project_path()
+        print("Project confirm:")
+        print(Namep)
+        print(pathp)#absolute path of the project folder
         # Update tree view
         self.tree.clear()
         root = QTreeWidgetItem([project_name])

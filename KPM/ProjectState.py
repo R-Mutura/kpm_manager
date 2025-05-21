@@ -3,7 +3,7 @@ from PySide6.QtCore import QObject, Signal
 class ProjectManager(QObject):
     # Signal emitted when project changes
      # Emit (project_name, is_open, project_path)
-    project_changed = Signal(str, bool, str)  # (project_name, is_open)
+    project_changed = Signal(str, bool, str)  
 
     def __init__(self):
         super().__init__()
