@@ -223,6 +223,7 @@ class DocGeneratorKiCLI:
         result = subprocess.run([
             self.kicad_cli,
             "pcb", "export", "vrml",
+            "-f",
             "--output", output_vrml,
             pcb_path
         ], capture_output=True, text=True)
