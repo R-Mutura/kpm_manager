@@ -64,7 +64,7 @@ class DocumentationGenerationWidget(QWidget):
         self.pcb_step_cb = QCheckBox("PCB 3D-STEP")
         self.pcb_vrml_cb = QCheckBox("PCB 3D-VRML")
         
-        self.pcb_img_cb.clicked.connect(self.handle_pcb_image_checkbox)
+        #self.pcb_img_cb.clicked.connect(self.handle_pcb_image_checkbox)
         
         #        
         
@@ -184,9 +184,27 @@ class DocumentationGenerationWidget(QWidget):
             
             
         if self.pcb_img_cb.isChecked():
-            #checked_items.append("images")
-            QMessageBox.warning(self, "You will have to generate the PNG imaged manually\n Go to View → 3D Viewer, Export Image \n I have made an Image folder for you!")
+            checked_items.append("images")
             # Extract base name again if needed
+            base_name = os.path.splitext(os.path.basename(project_file))[0]
+            pcb_file_name = f"{base_name}.kicad_pcb"
+            mypcb_file_path = os.path.join(os.path.dirname(project_file), pcb_file_name)
+            
+            if not os.path.exists(mypcb_file_path):
+                print(f"❌ Matching PCB file '{pcb_file_name}' not found.")
+                QMessageBox.critical(self, "Error", f"❌ Matching PCB file '{pcb_file_name}' not found.")
+                return
+
+            # Output path for PCB PDF
+            output_dir = os.path.join(self.project_path, "DOCUMENTATION", "Images")
+            os.makedirs(output_dir, exist_ok=True)
+            output_images_path = os.path.join(output_dir, f"{base_name}_top.png")
+
+            try:
+                gen.generate_pcb_render_top(pcb_path=mypcb_file_path, output_img=output_images_path)
+                QMessageBox.information(self, "Success", f"✅ 3D STEP generated successfully:\n{output_images_path}")
+            except Exception as e:
+                QMessageBox.critical(self, "Error Generating 3D images", str(e))
         
         if self.pcb_step_cb.isChecked():
             #checked_items.append("images")
@@ -243,21 +261,21 @@ class DocumentationGenerationWidget(QWidget):
 
         self.summary_label.setText(summary)
         #Generation of the documents
-    def handle_pcb_image_checkbox(self):
-        img_dir = os.path.join(self.project_path, "DOCUMENTATION", "Images")
-        os.makedirs(img_dir, exist_ok=True)
+    # def handle_pcb_image_checkbox(self):
+    #     img_dir = os.path.join(self.project_path, "DOCUMENTATION", "Images")
+    #     os.makedirs(img_dir, exist_ok=True)
 
-        os.makedirs(os.path.join(self.project_path, img_dir), exist_ok=True)
+    #     os.makedirs(os.path.join(self.project_path, img_dir), exist_ok=True)
 
-        QMessageBox.warning(
-            self,
-            "Notice",
-            "You will have to generate the PNG image manually.\n"
-            "Go to View → 3D Viewer, Export Image.\n"
-            "I have made an 'Image' folder for you!"
-        )
+    #     QMessageBox.warning(
+    #         self,
+    #         "Notice",
+    #         "You will have to generate the PNG image manually.\n"
+    #         "Go to View → 3D Viewer, Export Image.\n"
+    #         "I have made an 'Image' folder for you!"
+    #     )
 
-        self.pcb_img_cb.setChecked(False)
+    #     self.pcb_img_cb.setChecked(False)
 
         
         

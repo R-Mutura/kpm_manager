@@ -235,7 +235,34 @@ class DocGeneratorKiCLI:
             raise RuntimeError(f"KiCad VRML export failed: {result.stderr}")
         else:
             print(f"✅ VRML file generated at: {output_vrml}")
-            
+
+    def generate_pcb_render_top(self, pcb_path: str, output_img: str):
+        """
+        Generates a top render (SVG) of the PCB using KiCad CLI.
+        
+        Args:
+            pcb_path (str): Path to the .kicad_pcb file.
+            output_img (str): Path to the output .svg file (or .png if post-converted).
+            kicad_cli_path (str): Path to the kicad-cli executable (default: assumes in PATH).
+        """
+
+        result = subprocess.run([
+            self.kicad_cli,
+            "pcb", "render",
+            "--output", output_img,
+            "--side", "top",
+            "--width", "1920",
+            "--height", "1080",
+            # "--background", "#FFFFFF",  # White background
+            "--quality", "high",
+            "--preset", "default",
+            pcb_path
+        ], capture_output=True, text=True)
+
+        if result.returncode != 0:
+            raise RuntimeError(f"❌ KiCad CLI render failed:\n{result.stderr}")
+        else:
+            print(f"✅ Top PCB render (SVG) saved at: {output_img}")        
  #*************************************************************************************##
  
 if __name__ == "__main__":
