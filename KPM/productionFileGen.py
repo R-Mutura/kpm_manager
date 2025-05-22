@@ -1,0 +1,165 @@
+
+import sys
+import os
+import platform
+import subprocess
+
+
+class ProductionFilesGeneratorKICLI:
+    def __init__(self, project_name=None, project_path=None):
+        # self.kicad_cli = kicad_cli_path
+        self.projectName = project_name
+        self.projectPath = project_path
+        
+        # Decide which kicad-cli to call based on our OS
+        os_type = ProductionFilesGeneratorKICLI.current_os()
+        if os_type == "windows":
+            self.kicad_cli = r"C:\Program Files\KiCad\9.0\bin\kicad-cli.exe"
+        elif os_type == "wsl":
+            # if you want to call the Windows exe from WSL
+            self.kicad_cli = "/mnt/c/Program Files/KiCad/9.0/bin/kicad-cli.exe"
+        else:
+            # assume it's on your $PATH (Linux/macOS install)
+            self.kicad_cli = "kicad-cli"
+    # ─── Platform Detection ─────────────────────────────────────────
+    @staticmethod
+    def is_windows() -> bool:
+        return os.name == 'nt' or platform.system() == 'Windows'
+
+    @staticmethod
+    def is_mac() -> bool:
+        return platform.system() == 'Darwin'
+
+    @staticmethod
+    def is_wsl() -> bool:
+        if platform.system() != 'Linux':
+            return False
+        return 'microsoft' in platform.uname().release.lower()
+
+    @staticmethod
+    def is_linux() -> bool:
+        return platform.system() == 'Linux' and not ProductionFilesGeneratorKICLI.is_wsl()
+
+    @staticmethod
+    def current_os() -> str:
+        if ProductionFilesGeneratorKICLI.is_wsl():
+            return 'wsl'
+        if ProductionFilesGeneratorKICLI.is_windows():
+            return 'windows'
+        if ProductionFilesGeneratorKICLI.is_mac():
+            return 'mac'
+        if ProductionFilesGeneratorKICLI.is_linux():
+            return 'linux'
+        return 'unknown'
+
+    # ─── Path Conversion ────────────────────────────────────────────
+    @staticmethod
+    def wsl_to_windows_path(wsl_path: str) -> str:
+        if wsl_path.startswith("/mnt/"):
+            parts = wsl_path.split("/")
+            drive = parts[2].upper() + ":"
+            return os.path.join(drive, *parts[3:])
+        return wsl_path
+
+    # ─── Tests ─────────────────────────────────────────────────────
+    def test_cli(self):
+        """Prints kicad-cli version to confirm we can call it."""
+        print(f"Detected OS: {self.current_os()} → using `{self.kicad_cli}`")
+        try:
+            result = subprocess.run(
+                [self.kicad_cli, "--version"],
+                check=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
+            )
+            print("KiCad CLI Version:", result.stdout.strip())
+        except subprocess.CalledProcessError as e:
+            print("Error running KiCad CLI:", e.stderr)
+            
+    def generate_bom(self, sch_path: str, output_dir: str):
+        # output_path = os.path.join(output_dir, "bom.csv")
+        result = subprocess.run([
+            self.kicad_cli, "sch", "export", "bom",
+            "--output", output_dir,
+            sch_path
+        ], capture_output=True, text=True)
+        if result.returncode != 0:
+            error_msg = f"KiCad CLI failed: {result.stderr}"
+            print("❌ Error:", error_msg)
+            raise RuntimeError(error_msg)
+        else:
+            print(f"✅ PDF generated successfully at: {output_dir}")
+
+    def generate_gerber(self, pcb_path, output_dir):
+        # TODO: ! ADD A FEATURE THAT ONLY EXPORTS ACTIVE
+        #! WORKS WELL ENOUGH AS IS FOR NOW
+        result = subprocess.run([
+            self.kicad_cli, "pcb", "export", "gerbers",
+            "--output", output_dir,
+            pcb_path
+        ], capture_output=True, text=True)
+        if result.returncode != 0:
+            error_msg = f"KiCad CLI failed: {result.stderr}"
+            print("❌ Error:", error_msg)
+            raise RuntimeError(error_msg)
+        else:
+            print(f"✅ PDF generated successfully at: {output_dir}")
+
+    def generate_placement(self, pcb_path, output_dir):
+        result = subprocess.run([
+            self.kicad_cli, "pcb", 
+            "export", "pos",
+            "--units", "mm",
+            "--format", "csv",
+            "--exclude-dnp",
+            "--output", output_dir,
+            pcb_path
+        ], capture_output=True, text=True)
+        
+        if result.returncode != 0:
+            error_msg = f"KiCad CLI failed: {result.stderr}"
+            print("❌ Error:", error_msg)
+            raise RuntimeError(error_msg)
+        else:
+            print(f"✅ PDF generated successfully at: {output_dir}")
+
+    def generate_stackup(self, pcb_path, output_dir):
+        output_path = os.path.join(output_dir, "stackup.html")
+        result = subprocess.run([
+            self.kicad_cli, "pcb", "export", "stackup",
+            "--output", output_path,
+            pcb_path
+        ], capture_output=True, text=True)
+        if result.returncode != 0:
+            error_msg = f"KiCad CLI failed: {result.stderr}"
+            print("❌ Error:", error_msg)
+            raise RuntimeError(error_msg)
+        else:
+            print(f"✅ PDF generated successfully at: {output_dir}")
+
+    def generate_drill(self, pcb_path, output_dir):
+        result = subprocess.run([
+            self.kicad_cli, "pcb", "export", "drill",
+            "--output", output_dir,
+            pcb_path
+        ], capture_output=True, text=True)
+        if result.returncode != 0:
+            error_msg = f"KiCad CLI failed: {result.stderr}"
+            print("❌ Error:", error_msg)
+            raise RuntimeError(error_msg)
+        else:
+            print(f"✅ PDF generated successfully at: {output_dir}")
+
+    def generate_dxf(self, pcb_path, output_dir):
+        result = subprocess.run([
+            self.kicad_cli, "pcb", "export", "dxf",
+            "--output", output_dir,
+            pcb_path
+        ], capture_output=True, text=True)
+        if result.returncode != 0:
+            error_msg = f"KiCad CLI failed: {result.stderr}"
+            print("❌ Error:", error_msg)
+            raise RuntimeError(error_msg)
+        else:
+            print(f"✅ PDF generated successfully at: {output_dir}")

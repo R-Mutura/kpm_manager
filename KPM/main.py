@@ -5,12 +5,23 @@ from PySide6.QtWidgets import (
     QHBoxLayout, QPushButton, QGroupBox, QLabel, QFrame
 )
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QIcon, QPixmap
+import os
+    # """_summary_
+    #    #F68B1F => c85103 => dark orange
+       
+    #    # color schem used for icon on the  KPM logo
+    # """
+# color schem used for icon on the  KPM logo
 
 from global_project_manager import project_manager 
 from create_project import CreateProjectWidget
 from open_project import OpenProjectWidget
 from documentation_genrt import DocumentationGenerationWidget
 from project_tree_view import ProjectFileTreeWidget
+from productionfiles_gen_ui import ProductionFilesGeneratorWidget
+
+from ui_elements.log_level_ui import LogLevelWidget
 
 
 # from ProjectState import ProjectManager
@@ -19,7 +30,31 @@ from project_tree_view import ProjectFileTreeWidget
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+        # Logo Label
+        self.logo_widget = QWidget()
+        logo_layout = QVBoxLayout(self.logo_widget)
+        logo_layout.setContentsMargins(0, 10, 0, 10)
+        logo_layout.setAlignment(Qt.AlignCenter)
+
+        logo_label = QLabel()
+        logo_pixmap = QPixmap("icons/app_icon.png")  # Adjust the path as needed
+        logo_pixmap = logo_pixmap.scaled(100, 100, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        logo_label.setPixmap(logo_pixmap)
+        logo_label.setAlignment(Qt.AlignCenter)
+        
+        logo_layout.addWidget(logo_label)
+        
         self.setWindowTitle("KiCAD Project Manager")
+        icons = {
+            "Create Project": "create.png",
+            "Open Project": "open.png",
+            "Generate Documentation": "documentation.png",
+            "Review": "review.png",
+            "Generate Production Files": "production.png",
+            "Verify": "verify.png"
+        }
+        icon_dir = os.path.join(os.path.dirname(__file__), "icons")
+        
 
         main_widget = QWidget()
         main_layout = QHBoxLayout(main_widget)
@@ -33,8 +68,9 @@ class MainWindow(QMainWindow):
             "Create Project": self.load_create_project,
             "Open Project":   self.load_open_project,
             "Generate Documentation": self.load_doc_generator,
-            "Review and Verify": self.load_create_project,
-            "Generate Production Files": self.load_open_project,
+            "Review": self.load_create_project,
+            "Generate Production Files": self.load_production_files,
+            "Verify": self.load_create_project,
             # Add more buttons later
         }
         self.button = {}
@@ -64,11 +100,19 @@ class MainWindow(QMainWindow):
         for label, func in self.actions.items():
             btn = QPushButton(label)
             btn.setStyleSheet(self.normal_style)
+            #add the relevant icons
+            icon_path = icons.get(label)
+            if icon_path:
+                full_icon_path = os.path.join(icon_dir, icon_path)
+                if os.path.exists(full_icon_path):
+                    btn.setIcon(QIcon(full_icon_path))
+                    
+            #end of icon addition function
             btn.clicked.connect(lambda _, b=btn, f=func: self.handle_button_click(b, f))
             left_layout.addWidget(btn)
             self.button[label] = btn
             
-        left_layout.addStretch()
+        
         
         self.project_tree_widget = ProjectFileTreeWidget(None)
         # Limit its height to half the parent (initially)
@@ -76,6 +120,17 @@ class MainWindow(QMainWindow):
         #left_layout.addWidget(self.project_tree_widget, alignment=Qt.AlignBottom)
         left_layout.addWidget(self.project_tree_widget)
         
+        #log level buttons to allow flexible implementation of log levels
+        loglevelselector = LogLevelWidget()
+        loglevelselector.setMinimumHeight(80)
+        loglevelselector.setMaximumHeight(120)
+        loglevelselector.setStyleSheet("background-color: #D3D3D3; border-radius: 6px; padding: 8px; text-align: left;")
+        left_layout.addWidget(loglevelselector)
+        # Add a spacer to push the logo to the bottom   
+        
+        left_layout.addStretch()
+        
+        left_layout.addWidget(self.logo_widget)
         
         # Connect signal
         project_manager.project_changed.connect(self.on_project_changed)
@@ -125,6 +180,7 @@ class MainWindow(QMainWindow):
         super().resizeEvent(event)
         if hasattr(self, 'project_tree_widget'):
             self.project_tree_widget.setMaximumHeight(self.height() // 2)
+            
     
     #handle signal emmited on set_project in ProjectState projectstate manager
     def on_project_changed(self, name: str, is_open: bool, path: str):
@@ -177,10 +233,23 @@ class MainWindow(QMainWindow):
         print(f"pathp: {pathp}")
         widget = DocumentationGenerationWidget(status_dot=self.dot, status_label=self.status_label, project_name=Namep, project_path=pathp)
         self.right_layout.addWidget(widget)
+    def load_production_files(self):
+        self.right_box.setTitle("Production Files Generator")
+        self.clear_right()
+        #get the project details i.e name and path from project_manager
+        Namep = project_manager.get_project_name()
+        pathp = project_manager.get_project_path()
+        print(f"Namep: {Namep}")
+        print(f"pathp: {pathp}")
+        widget = ProductionFilesGeneratorWidget(status_dot=self.dot, status_label=self.status_label, project_name=Namep, project_path=pathp)
+        self.right_layout.addWidget(widget)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
+    icon_path = os.path.join(os.path.dirname(__file__), "icons", "app_icon.png")
+    app.setWindowIcon(QIcon(icon_path))
+
     win = MainWindow()
     win.show()
-    win.resize(600, 500)
+    win.resize(1000, 500)
     sys.exit(app.exec())

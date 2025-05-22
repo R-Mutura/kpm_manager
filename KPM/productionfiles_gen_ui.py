@@ -8,15 +8,15 @@ from PySide6.QtWidgets import (
     QTreeWidgetItem, QLabel, QMessageBox, QGroupBox, QRadioButton
 )
 from PySide6.QtCore import Qt
-from ProjectState import ProjectManager #statemanagement and synchronization.
-from docgenerators import DocGeneratorKiCLI
-#from global_project_manager import project_manager
+from productionFileGen import ProductionFilesGeneratorKICLI
+
+#manage log levels easily
 from ui_elements.loglevel_logic import CustomLogger
 # Get the singleton instance
 log_manager = CustomLogger()
 
 
-class DocumentationGenerationWidget(QWidget):
+class ProductionFilesGeneratorWidget(QWidget):
     def __init__(self, status_dot=None, status_label=None, project_name=None, project_path=None):
         super().__init__()
         self.project_name = project_name
@@ -57,72 +57,38 @@ class DocumentationGenerationWidget(QWidget):
         layout = QVBoxLayout(self) #main layout
 
         #create a small vertical box where checklist will be placed
-        group_box = QGroupBox("Select Export Options")
+        group_box = QGroupBox("Select Production File Options:")
         self.checklistlayout = QVBoxLayout()
         
         #checkboxTitle = QLabel("Select Document Option")
         
-        self.sch_pdf_cb = QCheckBox("Schematic PDF")
-        self.pcb_pdf_cb = QCheckBox("PCB Layout PDF")
-        self.pcb_img_cb = QCheckBox("PCB Images")
-        self.pcb_step_cb = QCheckBox("PCB 3D-STEP")
-        self.pcb_vrml_cb = QCheckBox("PCB 3D-VRML")
+        self.production_bom_cb = QCheckBox("Bill of Material (BOM)")
+        self.production_gbr_cb = QCheckBox("Gerber Files")
+        self.production_plc_cb = QCheckBox("Placement/Position Files (CSV)")
+        self.production_drill_cb = QCheckBox("PCB drill file")
+        self.production_stack_cb = QCheckBox("Stack`up Files")
+        self.production_stack_cb.setVisible(False) #these are not functional yet
+        self.production_dxf_cb = QCheckBox("PCB DXF")
+        self.production_dxf_cb.setVisible(False)   #these are not functional yet
         
-        #radio buttons for image format
-        self.pcb_img_cb.stateChanged.connect(self.toggle_image_format_options)
-        # --- Image Format Selection ---
-        self.image_format_box = QGroupBox("Select Image Format")
-        image_format_layout = QHBoxLayout()
-        #        
-        self.radio_png = QRadioButton("PNG")
-        self.radio_jpg = QRadioButton("JPG")
-        self.radio_png.setChecked(True)  # Default
-        image_format_layout.addWidget(self.radio_png)
-        image_format_layout.addWidget(self.radio_jpg)
-
-        self.image_format_box.setLayout(image_format_layout)
-        self.image_format_box.setVisible(False)  # 👈 Start hidden
-        #end of radio button
         
-        # --- Image Orientation Selection ---
-        self.image_orientation_cb_box = QGroupBox("Select Image Orientation")
-        image_orientation_layout = QVBoxLayout()
         
-        self.img_orientation_top = QCheckBox("Top")
-        self.img_orientation_bot = QCheckBox("Bottom")
-        self.img_orientation_iso_top = QCheckBox("Isometric_Top")
-        self.img_orientation_iso_bot = QCheckBox("Isometric_Bottom")
         
-        #set top and bottom as default to be automatically checked
-        self.img_orientation_top.setChecked(True)
-        self.img_orientation_bot.setChecked(True)  # Default
-        
-        image_orientation_layout.addWidget(self.img_orientation_top)
-        image_orientation_layout.addWidget(self.img_orientation_bot)
-        image_orientation_layout.addWidget(self.img_orientation_iso_top)
-        image_orientation_layout.addWidget(self.img_orientation_iso_bot)
-        
-        #add the image orientation layout to the group box
-        self.image_orientation_cb_box.setLayout(image_orientation_layout)
-        #set the image orientation layout to be hidden
-        self.image_orientation_cb_box.setVisible(False)  # 👈 Start hidden
-        
-        #end of image orientation
         # Add checkboxes to layout
-        self.checklistlayout.addWidget(self.sch_pdf_cb)
-        self.checklistlayout.addWidget(self.pcb_pdf_cb)
-        self.checklistlayout.addWidget(self.pcb_img_cb)
-        self.checklistlayout.addWidget(self.image_format_box)  # 👈 Add below image checkbox
-        self.checklistlayout.addWidget(self.image_orientation_cb_box) # 👈 Add below image orientation selection 
-        self.checklistlayout.addWidget(self.pcb_step_cb)
-        self.checklistlayout.addWidget(self.pcb_vrml_cb)
+        self.checklistlayout.addWidget(self.production_bom_cb)
+        self.checklistlayout.addWidget(self.production_gbr_cb)
+        self.checklistlayout.addWidget(self.production_plc_cb)
+        self.checklistlayout.addWidget(self.production_drill_cb) #
+        self.checklistlayout.addWidget(self.production_dxf_cb)
+        self.checklistlayout.addWidget(self.production_stack_cb)  # 
+        
         
         group_box.setLayout(self.checklistlayout)
-        self.summary_label = QLabel(" We are going to generate....")
+        self.summary_label = QLabel(" Production Files Simmary: ")
         self.summary_label.setAlignment(Qt.AlignCenter)
         # Generate button
         generate_btn = QPushButton("Generate")
-        generate_btn.clicked.connect(self.generate_report)
+        generate_btn.clicked.connect(self.generate_production_report)
 
 
         layout.addWidget(group_box)
@@ -132,20 +98,10 @@ class DocumentationGenerationWidget(QWidget):
         layout.addWidget(generate_btn, alignment=Qt.AlignCenter)
         
     
-
-    def toggle_image_format_options(self, state):
-        self.image_format_box.setVisible(bool(state))
-        self.image_orientation_cb_box.setVisible(bool(state))
-        #self.image_format_box.setVisible(True)
-        self.image_format_box.updateGeometry()
-        self.image_format_box.repaint()
-        self.checklistlayout.activate() #
-        #self.image_format_box.updateGeometry()
-    
-    def generate_report(self):
+    def generate_production_report(self):
         checked_items = []
-        gen = DocGeneratorKiCLI()
-        gen.test_cli()
+        genProduction = ProductionFilesGeneratorKICLI()
+        genProduction.test_cli()
         # 1. Locate the SRC folder
         src_path = None
         for root, dirs, _ in os.walk(self.project_path):
@@ -172,8 +128,8 @@ class DocumentationGenerationWidget(QWidget):
             QMessageBox.critical(self, "Error", "❌ .kicad_pro file not found in SRC.")
             return
 
-        if self.sch_pdf_cb.isChecked():
-            checked_items.append("schematic PDF")
+        if self.production_bom_cb.isChecked():
+            checked_items.append("BOM(csv)") 
             #call documet generation for sch_pdf from docgenerator.py
             # 3. Extract base name and check for matching .kicad_sch
             base_name = os.path.splitext(os.path.basename(project_file))[0]
@@ -185,24 +141,23 @@ class DocumentationGenerationWidget(QWidget):
                 QMessageBox.critical(self, "Error", f"❌ Matching schematic file '{sch_file_name}' not found.")
                 return
             # 4. Set output path: <project_root>/DOCUMENTATION/Schematic_pdf/<projectname>_SCHPDF.pdf
-            output_dir = os.path.join(self.project_path, "DOCUMENTATION", "Schematic_pdf")
+            output_dir = os.path.join(self.project_path, "Production_Files", "Bill_of_Materials")
             os.makedirs(output_dir, exist_ok=True)
-            output_pdf_path = os.path.join(output_dir, f"{base_name}_SCHPDF.pdf")
+            output_bom_path = os.path.join(output_dir, f"{base_name}_BOM.csv")
             
             
             # 5. Call the generator
             try:
-                gen.generate_sch_pdf(schematic_path=sch_file_path, output_pdf=output_pdf_path)
-                
+                genProduction.generate_bom(sch_path=sch_file_path, output_dir=output_bom_path)
                 if log_manager.get_log_level() == "High" or log_manager.get_log_level() == "Medium":
-                    QMessageBox.information(self, "Success", f"✅ PDF generated successfully:\n{output_pdf_path}")
+                    QMessageBox.information(self, "Success", f"✅ PDF generated successfully:\n{output_bom_path}")
             except Exception as e:
                 if log_manager.get_log_level() == "High" or log_manager.get_log_level() == "Medium":
                     QMessageBox.critical(self, "Error Generating PDF", str(e))
                 
                 
-        if self.pcb_pdf_cb.isChecked():
-            checked_items.append("PCB PDF")
+        if self.production_gbr_cb.isChecked():
+            checked_items.append("Gerber files")
             # Extract base name again if needed
             base_name = os.path.splitext(os.path.basename(project_file))[0]
             pcb_file_name = f"{base_name}.kicad_pcb"
@@ -214,34 +169,22 @@ class DocumentationGenerationWidget(QWidget):
                 return
 
             # Output path for PCB PDF
-            output_dir = os.path.join(self.project_path, "DOCUMENTATION", "PCB_pdf")
+            output_dir = os.path.join(self.project_path, "Production_Files", "Gerber")
             os.makedirs(output_dir, exist_ok=True)
-            output_pdf_path = os.path.join(output_dir, f"{base_name}_Top_PCBPDF.pdf")
+            output_gbr_path = output_dir
 
             # Call the generator
             try:
-                gen.generate_pcb_pdf_front(pcb_path=pcb_file_path, output_pdf=output_pdf_path)
+                genProduction.generate_gerber(pcb_path=pcb_file_path, output_dir=output_gbr_path)
                 if log_manager.get_log_level() == "High" or log_manager.get_log_level() == "Medium":
-                    QMessageBox.information(self, "Success", f"✅ PCB PDF generated successfully:\n{output_pdf_path}")
+                    QMessageBox.information(self, "Success", f"✅ PCB Gerber files generated successfully:\n{output_gbr_path}")
             except Exception as e:
                 if log_manager.get_log_level() == "High" or log_manager.get_log_level() == "Medium":
-                    QMessageBox.critical(self, "Error Generating PCB PDF", str(e))
-            
-            output_pdf_path = os.path.join(output_dir, f"{base_name}_Bot_PCBPDF.pdf")
-
-            # Call the generator
-            try:
-                gen.generate_pcb_pdf_bottom(pcb_path=pcb_file_path, output_pdf=output_pdf_path)
-                if log_manager.get_log_level() == "High" or log_manager.get_log_level() == "Medium":
-                    QMessageBox.information(self, "Success", f"✅ PCB PDF generated successfully:\n{output_pdf_path}")
-            except Exception as e:
-                if log_manager.get_log_level() == "High" or log_manager.get_log_level() == "Medium":
-                    QMessageBox.critical(self, "Error Generating PCB PDF", str(e))
- 
+                    QMessageBox.critical(self, "Error Generating Gerber Files", str(e))
             
             
-        if self.pcb_img_cb.isChecked():
-            checked_items.append("images")
+        if self.production_plc_cb.isChecked():
+            checked_items.append("Position Placement Files")
             # Extract base name again if needed
             base_name = os.path.splitext(os.path.basename(project_file))[0]
             pcb_file_name = f"{base_name}.kicad_pcb"
@@ -251,49 +194,25 @@ class DocumentationGenerationWidget(QWidget):
                 print(f"❌ Matching PCB file '{pcb_file_name}' not found.")
                 QMessageBox.critical(self, "Error", f"❌ Matching PCB file '{pcb_file_name}' not found.")
                 return
-            
-            # Choose image format
-            image_format = "png" if self.radio_png.isChecked() else "jpg"
-            
-            # Output path for PCB image
-            output_dir = os.path.join(self.project_path, "DOCUMENTATION", "Images")
+        
+            # Output path for PCB PDF
+            output_dir = os.path.join(self.project_path, "Production_Files", "Placement_Files")
             os.makedirs(output_dir, exist_ok=True)
-            # Orientation checkboxes and their labels
-            orientations = {
-                self.img_orientation_top: "Top",
-                self.img_orientation_bot: "Bottom",
-                self.img_orientation_iso_top: "IsoTop",
-                self.img_orientation_iso_bot: "IsoBottom"
-            }
-            for checkbox, orientation in orientations.items():
-                if checkbox.isChecked():
-                    output_image_path = os.path.join(output_dir, f"{base_name}_{orientation}.{image_format}")
-                    try:
-                        gen.generate_pcb_render(
-                            pcb_path=mypcb_file_path,
-                            orientation=orientation,
-                            output_img=output_image_path
-                        )
-                        print(f"✅ Image generated: {output_image_path}")
-                        if log_manager.get_log_level() == "High" or log_manager.get_log_level() == "Medium":
-                            QMessageBox.information(self, "Success", f"✅ Image generated: {output_image_path}")
-                    except Exception as e:
-                        if log_manager.get_log_level() == "High" or log_manager.get_log_level() == "Medium":
-                            QMessageBox.critical(self, "Error Generating Image", str(e))
-            # output_images_path = os.path.join(output_dir, f"{base_name}_top.{image_format}")
-            # # Call the generator
-            # #output_images_path = os.path.join(output_dir, f"{base_name}_{orientation}.{image_format}")
-           
-            # try:
-            #     gen.generate_pcb_render(pcb_path=mypcb_file_path, output_img=output_images_path)
-            #     QMessageBox.information(self, "Success", f"✅ Images generated successfully:\n{output_images_path}")
-            # except Exception as e:
-            #     QMessageBox.critical(self, "Error Generating 3D images", str(e))
-        
-        
-        if self.pcb_step_cb.isChecked():
+            output_plc_path = os.path.join(output_dir, f"{base_name}_cpl.csv")
+
+            # Call the generator
+            try:
+                genProduction.generate_placement(pcb_path=mypcb_file_path, output_dir=output_plc_path)
+                if log_manager.get_log_level() == "High" or log_manager.get_log_level() == "Medium":
+                    QMessageBox.information(self, "Success", f"✅ Placement files generated successfully:\n{output_plc_path}")
+            except Exception as e:
+                if log_manager.get_log_level() == "High" or log_manager.get_log_level() == "Medium":
+                    QMessageBox.critical(self, "Error Generating Placement Files", str(e))
+            
+            
+        if self.production_drill_cb.isChecked():
             #checked_items.append("images")
-            checked_items.append("STEP FILE")
+            checked_items.append("Drill files")
             # Extract base name again if needed
             base_name = os.path.splitext(os.path.basename(project_file))[0]
             pcb_file_name = f"{base_name}.kicad_pcb"
@@ -305,21 +224,22 @@ class DocumentationGenerationWidget(QWidget):
                 return
 
             # Output path for PCB PDF
-            output_dir = os.path.join(self.project_path, "DOCUMENTATION", "Step")
+            output_dir = os.path.join(self.project_path, "Production_Files", "Drill")
             os.makedirs(output_dir, exist_ok=True)
-            output_step_path = os.path.join(output_dir, f"{base_name}.step")
+            #output_step_path = os.path.join(output_dir, f"{base_name}.step")
+            output_drill_path = output_dir
 
             try:
-                gen.generate_step(pcb_path=pcb_file_path, output_step=output_step_path)
+                genProduction.generate_drill(pcb_path=pcb_file_path, output_dir=output_drill_path)
                 if log_manager.get_log_level() == "High" or log_manager.get_log_level() == "Medium":
-                    QMessageBox.information(self, "Success", f"✅ 3D STEP generated successfully:\n{output_step_path}")
+                    geBox.information(self, "Success", f"✅ Drill files generated successfully:\n{output_drill_path}")
             except Exception as e:
                 if log_manager.get_log_level() == "High" or log_manager.get_log_level() == "Medium":
-                    QMessageBox.critical(self, "Error Generating 3D STEP", str(e))
+                    QMessageBox.critical(self, "Error Generating Drill Files", str(e))
                     
             
-        if self.pcb_vrml_cb.isChecked():
-            checked_items.append("3D VRML FILE")
+        if self.production_dxf_cb.isChecked():
+            checked_items.append("DXF Files")
             # Extract base name again if needed
             base_name = os.path.splitext(os.path.basename(project_file))[0]
             pcb_file_name = f"{base_name}.kicad_pcb"
@@ -331,17 +251,17 @@ class DocumentationGenerationWidget(QWidget):
                 return
 
             # Output path for PCB PDF
-            output_dir = os.path.join(self.project_path, "DOCUMENTATION", "VRML")
+            output_dir = os.path.join(self.project_path, "Production_Files", "VRML")
             os.makedirs(output_dir, exist_ok=True)
-            output_vrml_path = os.path.join(output_dir, f"{base_name}.wrl")
+            output_dxf_path = os.path.join(output_dir, f"{base_name}.dxf")
 
             try:
-                gen.generate_vrml(pcb_path=pcb_file_path, output_vrml=output_vrml_path)
+                genProduction.generate_dxf(pcb_path=pcb_file_path, output_dir=output_dxf_path)
                 if log_manager.get_log_level() == "High" or log_manager.get_log_level() == "Medium":
-                    QMessageBox.information(self, "Success", f"✅ 3D STEP generated successfully:\n{output_vrml_path}")
+                    QMessageBox.information(self, "Success", f"✅ DXF File generated successfully:\n{output_dxf_path}")
             except Exception as e:
                 if log_manager.get_log_level() == "High" or log_manager.get_log_level() == "Medium":
-                    QMessageBox.critical(self, "Error Generating 3D VRML", str(e))
+                    QMessageBox.critical(self, "Error Generating DXF File ", str(e))
             
         if checked_items:
             summary = "Ready to generate: " + ", ".join(checked_items) + "."
@@ -373,7 +293,7 @@ class DocumentationGenerationWidget(QWidget):
 # Run for testing
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    window = DocumentationGenerationWidget()
+    window = ProductionFilesGenerator()
     window.resize(400, 250)
     window.show()
     sys.exit(app.exec())

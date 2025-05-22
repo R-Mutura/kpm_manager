@@ -236,7 +236,7 @@ class DocGeneratorKiCLI:
         else:
             print(f"✅ VRML file generated at: {output_vrml}")
 
-    def generate_pcb_render_top(self, pcb_path: str, output_img: str):
+    def generate_pcb_render(self, pcb_path: str, orientation: str, output_img: str):
         """
         Generates a top render (SVG) of the PCB using KiCad CLI.
         
@@ -245,19 +245,45 @@ class DocGeneratorKiCLI:
             output_img (str): Path to the output .svg file (or .png if post-converted).
             kicad_cli_path (str): Path to the kicad-cli executable (default: assumes in PATH).
         """
-
-        result = subprocess.run([
+        cmd = [
             self.kicad_cli,
             "pcb", "render",
             "--output", output_img,
-            "--side", "top",
             "--width", "1920",
             "--height", "1080",
-            # "--background", "#FFFFFF",  # White background
             "--quality", "high",
             "--preset", "default",
-            pcb_path
-        ], capture_output=True, text=True)
+        ]
+        # Determine CLI args based on orientation
+        orientation = orientation.lower()
+        if orientation == "top":
+            cmd += ["--side", "top"]
+        elif orientation == "bottom":
+            cmd += ["--side", "bottom"]
+        elif orientation == "isotop":
+            cmd += ["--rotate", "315,340,315"]
+        elif orientation == "isobottom":
+            cmd += ["--rotate", "150,340,45"]
+        else:
+            raise ValueError(f"❌ Unknown orientation: {orientation}")
+                    
+        
+        
+        cmd.append(pcb_path)
+        result = subprocess.run(cmd, capture_output=True, text=True)
+
+        # result = subprocess.run([
+        #     self.kicad_cli,
+        #     "pcb", "render",
+        #     "--output", output_img,
+        #     "--side", "top",
+        #     "--width", "1920",
+        #     "--height", "1080",
+        #     # "--background", "#FFFFFF",  # White background
+        #     "--quality", "high",
+        #     "--preset", "default",
+        #     pcb_path
+        # ], capture_output=True, text=True)
 
         if result.returncode != 0:
             raise RuntimeError(f"❌ KiCad CLI render failed:\n{result.stderr}")
@@ -267,13 +293,15 @@ class DocGeneratorKiCLI:
  
 if __name__ == "__main__":
     # You could replace these with values from a QFileDialog in your GUI
-    wsl_sch = "/mnt/c/Users/user/Documents/kicad6/fish_alert/fish_alert/src/fish_alert.kicad_sch"
-    win_sch = r"C:\Users\user\Documents\kicad6\fish_alert\fish_alert\src\fish_alert.kicad_sch"
+    #wsl_sch = "/mnt/c/Users/user/Documents/kicad6/fish_alert/fish_alert/src/fish_alert.kicad_sch"
+    mwsl_sch = r"C:\Users\ujuzi\Documents\python\kitest\ONE\SRC\ONE\ONE.kicad_pcb"
+    #win_sch = r"C:\Users\user\Documents\kicad6\fish_alert\fish_alert\src\fish_alert.kicad_sch"
 
     # Pick the right one based on the environment
-    sch = wsl_sch if DocGeneratorKiCLI.is_wsl() else win_sch
+    #sch = wsl_sch if DocGeneratorKiCLI.is_wsl() else win_sch
     out = "./fish_alert.pdf"
 
     gen = DocGeneratorKiCLI()
     gen.test_cli()
+    gen.generate_pcb_render(mwsl_sch, "isobottom", "fish_alert.png")
     #gen.generate_sch_pdf(sch, out)

@@ -18,6 +18,10 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt
 
+from ui_elements.loglevel_logic import CustomLogger
+# Get the singleton instance
+log_manager = CustomLogger()
+
 
 class CreateProjectWidget(QWidget):
     def __init__(self, status_dot=None, status_label=None):
@@ -64,6 +68,7 @@ class CreateProjectWidget(QWidget):
         base = self.folder_edit.text().strip()
         name = self.name_edit.text().strip()
         if not base or not name:
+            
             QMessageBox.critical(self, "Error", "Provide project name and a valid Project Folder.")
             return
 
