@@ -22,6 +22,7 @@ from project_tree_view import ProjectFileTreeWidget
 from productionfiles_gen_ui import ProductionFilesGeneratorWidget
 
 from ui_elements.log_level_ui import LogLevelWidget
+from ui_elements.progress_bar_logic import ProjectProgressWidget
 
 
 # from ProjectState import ProjectManager
@@ -126,6 +127,9 @@ class MainWindow(QMainWindow):
         loglevelselector.setMaximumHeight(120)
         loglevelselector.setStyleSheet("background-color: #D3D3D3; border-radius: 6px; padding: 8px; text-align: left;")
         left_layout.addWidget(loglevelselector)
+        # add progress bar
+        self.progressbarstatus = ProjectProgressWidget()
+        left_layout.addWidget(self.progressbarstatus)
         # Add a spacer to push the logo to the bottom   
         
         left_layout.addStretch()
@@ -134,6 +138,8 @@ class MainWindow(QMainWindow):
         
         # Connect signal
         project_manager.project_changed.connect(self.on_project_changed)
+        project_manager.update_document_tree.connect(self.on_project_update)
+        project_manager.project_progress_status.connect(self.updateProjectProgress)
                 
         
         
@@ -181,7 +187,15 @@ class MainWindow(QMainWindow):
         if hasattr(self, 'project_tree_widget'):
             self.project_tree_widget.setMaximumHeight(self.height() // 2)
             
-    
+    def updateProjectProgress(self, progress_dict):
+        #update progress bar
+        print("Progress update received:", progress_dict)
+        self.progressbarstatus.updateProjectProgress(progress_dict)
+
+        #update metadata once there are valid changes
+        project_manager.update_metadata(project_manager.get_project_path(), "Progress")
+
+
     #handle signal emmited on set_project in ProjectState projectstate manager
     def on_project_changed(self, name: str, is_open: bool, path: str):
         if is_open:
@@ -189,6 +203,13 @@ class MainWindow(QMainWindow):
             self.project_tree_widget.repaint()
         else:
             self.project_tree_widget.load_project(None)
+            # self.project_tree_widget.tree_widget.clear()
+            # self.project_tree_widget.label.setText("Project Root: Not loaded")
+    def on_project_update(self):
+        
+            self.project_tree_widget.load_project(project_manager.get_project_path())
+            self.project_tree_widget.repaint()
+        
             # self.project_tree_widget.tree_widget.clear()
             # self.project_tree_widget.label.setText("Project Root: Not loaded")
             

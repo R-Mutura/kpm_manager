@@ -1,14 +1,15 @@
 import os
 import sys
 import datetime
-
+#
 from PySide6.QtWidgets import (
     QApplication, QHBoxLayout, QMainWindow, QFileDialog,
     QWidget, QCheckBox, QVBoxLayout, QLineEdit, QPushButton, QTreeWidget,
     QTreeWidgetItem, QLabel, QMessageBox, QGroupBox, QRadioButton
 )
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Signal
 from productionFileGen import ProductionFilesGeneratorKICLI
+from global_project_manager import project_manager
 
 #manage log levels easily
 from ui_elements.loglevel_logic import CustomLogger
@@ -19,12 +20,17 @@ log_manager = CustomLogger()
 class ProductionFilesGeneratorWidget(QWidget):
     def __init__(self, status_dot=None, status_label=None, project_name=None, project_path=None):
         super().__init__()
+        #
         self.project_name = project_name
         self.project_path = project_path
         print(self.project_name)
         print(self.project_path)
         self.dot = status_dot
         self.status_label = status_label
+        #creating a signal that will be used to handle changes states and action generations here
+        #1. signal 1 just emits a signal each time the generate button is pressed to update a documetn tree
+
+        #2. Emits a signal to update the progress bar in the main window to show level of execution in the project
         #styles sheet definitins for the project
         self.setStyleSheet("""
             mQWidget {
@@ -96,7 +102,13 @@ class ProductionFilesGeneratorWidget(QWidget):
         layout.addWidget(self.summary_label)
         layout.addSpacing(5)
         layout.addWidget(generate_btn, alignment=Qt.AlignCenter)
-        
+
+    def on_successful_generation(self, name: str, state: bool):
+        # Update internal state
+        if name in project_manager.default_states:
+            project_manager.default_states[name] = state
+        else:
+            print(f"Warning: '{name}' not in default_states")  
     
     def generate_production_report(self):
         checked_items = []
@@ -143,18 +155,37 @@ class ProductionFilesGeneratorWidget(QWidget):
             # 4. Set output path: <project_root>/DOCUMENTATION/Schematic_pdf/<projectname>_SCHPDF.pdf
             output_dir = os.path.join(self.project_path, "Production_Files", "Bill_of_Materials")
             os.makedirs(output_dir, exist_ok=True)
-            output_bom_path = os.path.join(output_dir, f"{base_name}_BOM.csv")
+            output_bom_path = os.path.join(output_dir, f"{base_name}_BOM.xml")
             
             
             # 5. Call the generator
             try:
-                genProduction.generate_bom(sch_path=sch_file_path, output_dir=output_bom_path)
+                genProduction.generate_bom_legacy(sch_path=sch_file_path, output_dir=output_bom_path)#generae xml BOM type first
                 if log_manager.get_log_level() == "High" or log_manager.get_log_level() == "Medium":
                     QMessageBox.information(self, "Success", f"✅ PDF generated successfully:\n{output_bom_path}")
+                
             except Exception as e:
                 if log_manager.get_log_level() == "High" or log_manager.get_log_level() == "Medium":
                     QMessageBox.critical(self, "Error Generating PDF", str(e))
-                
+            #after lgacy bom.xml is generated then we do the processing using the csv_grouped by value.py file in the aME FOLDER WHICH IS output_bom_path
+            
+            sch_file_path = output_bom_path
+            base, _ = os.path.splitext(output_bom_path)
+            output_bom_csv = base + ".csv"
+            print(output_bom_csv)
+            if not os.path.exists(sch_file_path):
+                print(f"❌ Matching .XML file for parsing not found.")
+                QMessageBox.critical(self, "Error", f"❌ Matching schematic file not found.")
+                return
+
+            try:
+                genProduction.generate_bom(sch_path=sch_file_path, output_dir=output_bom_csv)#generae xml BOM type first
+                if log_manager.get_log_level() == "High" or log_manager.get_log_level() == "Medium":
+                    QMessageBox.information(self, "Success", f"✅ PDF generated successfully:\n{output_bom_csv}")
+                self.on_successful_generation(name="BOM", state=True)
+            except Exception as e:
+                if log_manager.get_log_level() == "High" or log_manager.get_log_level() == "Medium":
+                    QMessageBox.critical(self, "Error Generating BOM.csv File", str(e))
                 
         if self.production_gbr_cb.isChecked():
             checked_items.append("Gerber files")
@@ -178,6 +209,7 @@ class ProductionFilesGeneratorWidget(QWidget):
                 genProduction.generate_gerber(pcb_path=pcb_file_path, output_dir=output_gbr_path)
                 if log_manager.get_log_level() == "High" or log_manager.get_log_level() == "Medium":
                     QMessageBox.information(self, "Success", f"✅ PCB Gerber files generated successfully:\n{output_gbr_path}")
+                self.on_successful_generation(name="Gerber", state=True)
             except Exception as e:
                 if log_manager.get_log_level() == "High" or log_manager.get_log_level() == "Medium":
                     QMessageBox.critical(self, "Error Generating Gerber Files", str(e))
@@ -205,6 +237,7 @@ class ProductionFilesGeneratorWidget(QWidget):
                 genProduction.generate_placement(pcb_path=mypcb_file_path, output_dir=output_plc_path)
                 if log_manager.get_log_level() == "High" or log_manager.get_log_level() == "Medium":
                     QMessageBox.information(self, "Success", f"✅ Placement files generated successfully:\n{output_plc_path}")
+                self.on_successful_generation(name="Placement", state=True)
             except Exception as e:
                 if log_manager.get_log_level() == "High" or log_manager.get_log_level() == "Medium":
                     QMessageBox.critical(self, "Error Generating Placement Files", str(e))
@@ -233,6 +266,7 @@ class ProductionFilesGeneratorWidget(QWidget):
                 genProduction.generate_drill(pcb_path=pcb_file_path, output_dir=output_drill_path)
                 if log_manager.get_log_level() == "High" or log_manager.get_log_level() == "Medium":
                     geBox.information(self, "Success", f"✅ Drill files generated successfully:\n{output_drill_path}")
+                self.on_successful_generation(name="Drill", state=True)
             except Exception as e:
                 if log_manager.get_log_level() == "High" or log_manager.get_log_level() == "Medium":
                     QMessageBox.critical(self, "Error Generating Drill Files", str(e))
@@ -259,6 +293,7 @@ class ProductionFilesGeneratorWidget(QWidget):
                 genProduction.generate_dxf(pcb_path=pcb_file_path, output_dir=output_dxf_path)
                 if log_manager.get_log_level() == "High" or log_manager.get_log_level() == "Medium":
                     QMessageBox.information(self, "Success", f"✅ DXF File generated successfully:\n{output_dxf_path}")
+                self.on_successful_generation(name="DXF", state=True)
             except Exception as e:
                 if log_manager.get_log_level() == "High" or log_manager.get_log_level() == "Medium":
                     QMessageBox.critical(self, "Error Generating DXF File ", str(e))
@@ -269,22 +304,11 @@ class ProductionFilesGeneratorWidget(QWidget):
             summary = "No options selected."
 
         self.summary_label.setText(summary)
-        #Generation of the documents
-    # def handle_pcb_image_checkbox(self):
-    #     img_dir = os.path.join(self.project_path, "DOCUMENTATION", "Images")
-    #     os.makedirs(img_dir, exist_ok=True)
 
-    #     os.makedirs(os.path.join(self.project_path, img_dir), exist_ok=True)
+        # lets emit a signal here that will be used to update the tree and redraw it. the tree is in main
+        project_manager.update_document_tree.emit() # Emit the signal
 
-    #     QMessageBox.warning(
-    #         self,
-    #         "Notice",
-    #         "You will have to generate the PNG image manually.\n"
-    #         "Go to View → 3D Viewer, Export Image.\n"
-    #         "I have made an 'Image' folder for you!"
-    #     )
-
-    #     self.pcb_img_cb.setChecked(False)
+        project_manager.project_progress_status.emit(project_manager.default_states)
 
         
         

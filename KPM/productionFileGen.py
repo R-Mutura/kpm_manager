@@ -15,6 +15,8 @@ class ProductionFilesGeneratorKICLI:
         os_type = ProductionFilesGeneratorKICLI.current_os()
         if os_type == "windows":
             self.kicad_cli = r"C:\Program Files\KiCad\9.0\bin\kicad-cli.exe"
+            bom_script_path = r"C:\Program Files\KiCad\9.0\bin\scripting\plugins\bom_csv_grouped_by_value.py"
+            self.custom_bom_py = r"C:\Program Files\KiCad\9.0\bin\scripting\plugins/bom_csv_grouped_by_value.py"
         elif os_type == "wsl":
             # if you want to call the Windows exe from WSL
             self.kicad_cli = "/mnt/c/Program Files/KiCad/9.0/bin/kicad-cli.exe"
@@ -76,11 +78,11 @@ class ProductionFilesGeneratorKICLI:
             print("KiCad CLI Version:", result.stdout.strip())
         except subprocess.CalledProcessError as e:
             print("Error running KiCad CLI:", e.stderr)
-            
-    def generate_bom(self, sch_path: str, output_dir: str):
+
+    def generate_bom_legacy(self, sch_path: str, output_dir: str):
         # output_path = os.path.join(output_dir, "bom.csv")
         result = subprocess.run([
-            self.kicad_cli, "sch", "export", "bom",
+            self.kicad_cli, "sch", "export", "python-bom",
             "--output", output_dir,
             sch_path
         ], capture_output=True, text=True)
@@ -90,6 +92,48 @@ class ProductionFilesGeneratorKICLI:
             raise RuntimeError(error_msg)
         else:
             print(f"✅ PDF generated successfully at: {output_dir}")
+
+
+    def generate_bom(self, sch_path: str, output_dir: str):
+        # output_path = os.path.join(output_dir, "bom.csv")
+        #path to custom plug in generator => C:\Program Files\KiCad\9.0\bin\scripting\plugins/bom_csv_grouped_by_value.py
+        # Build command
+        try:
+            cmd = [
+                "python3 ",
+                self.custom_bom_py,
+                sch_path,
+                output_dir
+            ]
+            # Execute subprocess
+            result = subprocess.run(cmd, capture_output=True, text=True)
+            # Check for errors
+            if result.returncode != 0:
+                print(f"❌ BOM generation failed (code {result.returncode}):", file=sys.stderr)
+                print(result.stderr, file=sys.stderr)
+                return False
+
+            print(f"✅ BOM generated successfully at: {output_dir}")
+            return True
+
+        except Exception as e:
+            print(f"❌ Exception during BOM generation: {e}", file=sys.stderr)
+            return False
+
+        # Run the command
+        result = subprocess.run([
+            "python",  # or "python3" depending on your environment
+            self.custom_bom_py,
+            sch_path,
+            output_dir
+        ], capture_output=True, text=True)
+
+        # Handle result
+        if result.returncode != 0:
+            print("❌ Error generating BOM:")
+            print(result.stderr)
+        else:
+            print("✅ BOM generated successfully at:", output_dir)
 
     def generate_gerber(self, pcb_path, output_dir):
         # TODO: ! ADD A FEATURE THAT ONLY EXPORTS ACTIVE
@@ -163,3 +207,13 @@ class ProductionFilesGeneratorKICLI:
             raise RuntimeError(error_msg)
         else:
             print(f"✅ PDF generated successfully at: {output_dir}")
+
+if __name__ == "__main__":
+    import argparse
+
+    gen = ProductionFilesGeneratorKICLI() 
+
+    sch = r"C:\Users\user\Documents\KiCad\KPM_PROJECTS\ONE\SRC\ONE\ONE.xml"
+    output = r"C:\Users\user\Documents\KiCad\KPM_PROJECTS\ONE\Project_Files\BOM\one.csv"
+    success = gen.generate_bom(sch, output)
+    sys.exit(0 if success else 1)

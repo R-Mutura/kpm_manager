@@ -57,11 +57,14 @@ class CreateProjectWidget(QWidget):
         layout.addWidget(create_btn)
         layout.addWidget(QLabel("Project Structure Preview:"))
         layout.addWidget(self.tree)
+        
 
     def browse_folder(self):
         folder = QFileDialog.getExistingDirectory(self, "Select Project Base Folder")
         if folder:
             self.folder_edit.setText(folder)
+
+    
             
 
     def on_create(self):
@@ -141,6 +144,7 @@ class CreateProjectWidget(QWidget):
             return
        
         project_manager.set_project(name, root_path)
+        
         
         self.tree.clear()
         root = QTreeWidgetItem([name])

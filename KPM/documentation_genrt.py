@@ -10,7 +10,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt
 from ProjectState import ProjectManager #statemanagement and synchronization.
 from docgenerators import DocGeneratorKiCLI
-#from global_project_manager import project_manager
+from global_project_manager import project_manager
 from ui_elements.loglevel_logic import CustomLogger
 # Get the singleton instance
 log_manager = CustomLogger()
@@ -132,6 +132,13 @@ class DocumentationGenerationWidget(QWidget):
         layout.addWidget(generate_btn, alignment=Qt.AlignCenter)
         
     
+    def on_successful_generation(self, name: str, state: bool):
+        # Update internal state
+        if name in project_manager.default_states:
+            project_manager.default_states[name] = state
+        else:
+            print(f"Warning: '{name}' not in default_states")
+        
 
     def toggle_image_format_options(self, state):
         self.image_format_box.setVisible(bool(state))
@@ -196,6 +203,7 @@ class DocumentationGenerationWidget(QWidget):
                 
                 if log_manager.get_log_level() == "High" or log_manager.get_log_level() == "Medium":
                     QMessageBox.information(self, "Success", f"✅ PDF generated successfully:\n{output_pdf_path}")
+                self.on_successful_generation(name="Schematic_PDF", state=True)
             except Exception as e:
                 if log_manager.get_log_level() == "High" or log_manager.get_log_level() == "Medium":
                     QMessageBox.critical(self, "Error Generating PDF", str(e))
@@ -223,6 +231,7 @@ class DocumentationGenerationWidget(QWidget):
                 gen.generate_pcb_pdf_front(pcb_path=pcb_file_path, output_pdf=output_pdf_path)
                 if log_manager.get_log_level() == "High" or log_manager.get_log_level() == "Medium":
                     QMessageBox.information(self, "Success", f"✅ PCB PDF generated successfully:\n{output_pdf_path}")
+                self.on_successful_generation(name="PCB_PDF", state=True)
             except Exception as e:
                 if log_manager.get_log_level() == "High" or log_manager.get_log_level() == "Medium":
                     QMessageBox.critical(self, "Error Generating PCB PDF", str(e))
@@ -277,6 +286,7 @@ class DocumentationGenerationWidget(QWidget):
                         print(f"✅ Image generated: {output_image_path}")
                         if log_manager.get_log_level() == "High" or log_manager.get_log_level() == "Medium":
                             QMessageBox.information(self, "Success", f"✅ Image generated: {output_image_path}")
+                        self.on_successful_generation(name="Images", state=True)
                     except Exception as e:
                         if log_manager.get_log_level() == "High" or log_manager.get_log_level() == "Medium":
                             QMessageBox.critical(self, "Error Generating Image", str(e))
@@ -313,6 +323,7 @@ class DocumentationGenerationWidget(QWidget):
                 gen.generate_step(pcb_path=pcb_file_path, output_step=output_step_path)
                 if log_manager.get_log_level() == "High" or log_manager.get_log_level() == "Medium":
                     QMessageBox.information(self, "Success", f"✅ 3D STEP generated successfully:\n{output_step_path}")
+                self.on_successful_generation(name="Step", state=True)
             except Exception as e:
                 if log_manager.get_log_level() == "High" or log_manager.get_log_level() == "Medium":
                     QMessageBox.critical(self, "Error Generating 3D STEP", str(e))
@@ -339,6 +350,7 @@ class DocumentationGenerationWidget(QWidget):
                 gen.generate_vrml(pcb_path=pcb_file_path, output_vrml=output_vrml_path)
                 if log_manager.get_log_level() == "High" or log_manager.get_log_level() == "Medium":
                     QMessageBox.information(self, "Success", f"✅ 3D STEP generated successfully:\n{output_vrml_path}")
+                self.on_successful_generation(name="VRML", state=True)
             except Exception as e:
                 if log_manager.get_log_level() == "High" or log_manager.get_log_level() == "Medium":
                     QMessageBox.critical(self, "Error Generating 3D VRML", str(e))
@@ -349,6 +361,10 @@ class DocumentationGenerationWidget(QWidget):
             summary = "No options selected."
 
         self.summary_label.setText(summary)
+
+        project_manager.update_document_tree.emit()#update the project tree
+        project_manager.project_progress_status.emit(project_manager.default_states)
+
         #Generation of the documents
     # def handle_pcb_image_checkbox(self):
     #     img_dir = os.path.join(self.project_path, "DOCUMENTATION", "Images")
