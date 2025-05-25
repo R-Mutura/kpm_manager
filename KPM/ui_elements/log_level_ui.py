@@ -1,11 +1,14 @@
 from PySide6.QtWidgets import QApplication, QWidget, QComboBox, QVBoxLayout, QLabel
 
+
 from .loglevel_logic import CustomLogger
 # Get the singleton instance
 log_manager = CustomLogger()
 
 class LogLevelWidget(QWidget):
+    
     def __init__(self):
+        
         super().__init__()
 
         self.setWindowTitle("Set Log Level")
@@ -49,6 +52,8 @@ class LogLevelWidget(QWidget):
         
         current_level = log_manager.get_log_level()
         print(f"Current Log Level: {current_level}")  
+        
+        #put in db his state
         
         # Logging messages
         log = log_manager.get_logger()

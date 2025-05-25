@@ -58,6 +58,7 @@ class ProductionFilesGeneratorWidget(QWidget):
                 background-color: #45a049;
             }
         """)
+        self.summaryWidget = QWidget()
         #all items stored in a vbox layout
 
         layout = QVBoxLayout(self) #main layout
@@ -99,7 +100,7 @@ class ProductionFilesGeneratorWidget(QWidget):
 
         layout.addWidget(group_box)
         layout.addSpacing(10)
-        layout.addWidget(self.summary_label)
+        layout.addWidget(self.summaryWidget)
         layout.addSpacing(5)
         layout.addWidget(generate_btn, alignment=Qt.AlignCenter)
 
@@ -298,12 +299,28 @@ class ProductionFilesGeneratorWidget(QWidget):
                 if log_manager.get_log_level() == "High" or log_manager.get_log_level() == "Medium":
                     QMessageBox.critical(self, "Error Generating DXF File ", str(e))
             
-        if checked_items:
-            summary = "Ready to generate: " + ", ".join(checked_items) + "."
-        else:
-            summary = "No options selected."
+        # if checked_items:
+        #     summary = "Ready to generate: " + ", ".join(checked_items) + "."
+        # else:
+        #     summary = "No options selected."
 
-        self.summary_label.setText(summary)
+        # self.summary_label.setText(summary)
+
+        summarylayout = QHBoxLayout()
+        summarylayout.setSpacing(10)  # space between items
+        summarylayout.setContentsMargins(0, 0, 0, 0)
+
+        for key, value in project_manager.default_states.items():
+            slabel = QLabel()
+            sicon = '✅' if value else '❌'
+            if key == "BOM" or  key == "Gerber"  or  key == "Placement"  or  key == "Drill":
+                slabel.setText(f"{key}: {sicon}")
+                slabel.setStyleSheet(
+                    f"color: {'green' if value else 'red'}; font-weight: bold;")
+                summarylayout.addWidget(slabel)
+        
+        self.summaryWidget.setLayout(summarylayout)
+        
 
         # lets emit a signal here that will be used to update the tree and redraw it. the tree is in main
         project_manager.update_document_tree.emit() # Emit the signal

@@ -10,6 +10,9 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt
 from global_project_manager import project_manager
+from ui_elements.loglevel_logic import CustomLogger
+# Get the singleton instance
+log_manager = CustomLogger()
 
 class OpenProjectWidget(QWidget):
     def __init__(self, status_dot=None, status_label=None):
@@ -113,30 +116,42 @@ class OpenProjectWidget(QWidget):
         
         self.db = project_manager.open_sqlite_database()
         if self.db:
-            QMessageBox.warning(
-                None,
-                "Database SetUp Success",
-                f"Opened database"
+            print("database active")
+            # QMessageBox.warning(
+            #     None,
+            #     "Database SetUp Success",
+            #     f"Opened database"
                 
-            )
+            # )
             # Create table if needed
         if not project_manager.create_project_table(self.db):
             sys.exit(1)
 
             #read its current content 
-            
-            #write our data to database
-       
+     
+        project_logstate = project_manager.read_project_progress(self.db, project_manager.get_project_path(), item_to_read = "logstate")
+        if(project_logstate):
+            print("log level status: ", project_logstate)
+            log_manager.set_log_level(project_logstate) #set log state
+            project_manager.log_level_change.emit(project_logstate)
+            if log_manager.get_log_level() == "High":
+                QMessageBox.information(
+                    None,
+                    "Loaded Progress",
+                    str(project_logstate)
+                )
+
         project_progress = project_manager.read_project_progress(self.db, project_manager.get_project_path())
         if(project_progress):
             print("db_read_data:", project_progress)
             project_manager.default_states = project_progress #save the project statu and emit a signal to the status bar 
             project_manager.project_progress_status.emit(project_progress)
-            QMessageBox.information(
-                None,
-                "Loaded Progress",
-                str(project_progress)
-            )
+            # if log_manager.get_log_level() == "High":
+            #     QMessageBox.information(
+            #         None,
+            #         "Loaded Progress",
+            #         str(project_progress)
+            #     )
         else: 
             #if the project is not present in the data base then we add it
             ok = project_manager.insert_or_update_project(
@@ -144,7 +159,7 @@ class OpenProjectWidget(QWidget):
                 project_manager.get_project_name(),
                 project_manager.get_project_path(),
                 project_manager.default_states,
-                description
+                
             )
             if not ok:
                 # sys.exit(1)

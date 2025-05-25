@@ -43,8 +43,8 @@ class KpmDatabase:
             name TEXT NOT NULL,
             path TEXT NOT NULL UNIQUE,
             progress_json TEXT,
-            description TEXT,
-            logstate TEXT
+            logstate TEXT,
+            description TEXT
         )
         """
         if not query.exec(sql):
@@ -55,6 +55,23 @@ class KpmDatabase:
             )
             return False
         return True
+    
+    def add_table_column(self, db: QSqlDatabase, table_name: str = "logstate"):
+        query = QSqlQuery(db)
+        query.exec("PRAGMA table_info(projects)")
+        column_names = []
+        while query.next():
+            column_names.append(query.value(1))
+
+        if "{table_name}" not in column_names:
+            alter_query = QSqlQuery(db)
+            if not alter_query.exec("ALTER TABLE projects ADD COLUMN logstate TEXT"):
+                QMessageBox.critical(
+                    None,
+                    "Database Error",
+                    f"Failed to add 'logstate' column:\n{alter_query.lastError().text()}"
+                )
+
 
     def insert_or_update_project(
         self,
@@ -113,12 +130,12 @@ class KpmDatabase:
 
         return True
 
-    def read_project_progress(self, db: QSqlDatabase, project_path: str) -> dict | None:
+    def read_project_progress(self, db: QSqlDatabase, project_path: str, item_to_read:str = "progress_json" ) -> dict | None:
         """
-        Reads the `progress_json` for the given path and returns it as a dict.
+        Reads the eg`progress_json` for the given path and returns it as a dict.
         """
         query = QSqlQuery(db)
-        query.prepare("SELECT progress_json FROM projects WHERE path = :path")
+        query.prepare(f"SELECT {item_to_read} FROM projects WHERE path = :path")
         query.bindValue(":path", project_path)
         if not query.exec():
             print("DB Error:", query.lastError().text())
@@ -126,12 +143,15 @@ class KpmDatabase:
 
         if query.next():
             raw = query.value(0)
-            try:
-                return json.loads(raw)
-            except json.JSONDecodeError:
-                print(f"Invalid JSON for project at {project_path}")
-                return None
-
+            if item_to_read == "progress_json":
+                
+                try:
+                    return json.loads(raw)
+                except json.JSONDecodeError:
+                    print(f"Invalid JSON for project at {project_path}")
+                    return None
+            else:
+                return raw
         print(f"No project found at path: {project_path}")
         return None
     #writes only the item of interest
@@ -155,6 +175,40 @@ class KpmDatabase:
                 None,
                 "Database Error",
                 f"Failed to update project progress:\n{query.lastError().text()}"
+            )
+            return False
+
+        # Optionally check if any row was actually affected:
+        if query.numRowsAffected() == 0:
+            QMessageBox.warning(
+                None,
+                "Database Warning",
+                f"No project found at path: {path}"
+            )
+            return False
+
+        return True
+
+    def update_project_loglevel(self, db: QSqlDatabase, path: str, loglevel: str = "HIGH") -> bool:
+        """
+        Updates only the loglevel column for the project with the given path.
+        """
+        #loglevel_json = json.dumps(loglevel)
+
+        query = QSqlQuery(db)
+        query.prepare("""
+            UPDATE projects
+               SET logstate = :logstate
+             WHERE path = :path
+        """)
+        query.bindValue(":logstate", loglevel)
+        query.bindValue(":path", path)
+
+        if not query.exec():
+            QMessageBox.critical(
+                None,
+                "Database Error",
+                f"Failed to update LOGLEVEL:\n{query.lastError().text()}"
             )
             return False
 

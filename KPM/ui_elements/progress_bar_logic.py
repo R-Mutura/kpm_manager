@@ -32,7 +32,7 @@ class ProjectProgressWidget(QWidget):
 
         percent = int((done / total) * 100)
         self.progress_bar.setValue(percent)
-        self.progress_label.setText(f"Progress: {percent}%")
+        self.progress_label.setText(f"Progress: %")#{percent}%"
 
         self.step_list.clear()
         for key, value in progress_dict.items():

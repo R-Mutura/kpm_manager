@@ -8,6 +8,8 @@ from PySide6.QtWidgets import (
     QTreeWidgetItem, QLabel, QMessageBox, QGroupBox, QRadioButton
 )
 from PySide6.QtCore import Qt
+
+
 from ProjectState import ProjectManager #statemanagement and synchronization.
 from docgenerators import DocGeneratorKiCLI
 from global_project_manager import project_manager
@@ -55,6 +57,8 @@ class DocumentationGenerationWidget(QWidget):
         #all items stored in a vbox layout
 
         layout = QVBoxLayout(self) #main layout
+
+        self.summaryWidget = QWidget()
 
         #create a small vertical box where checklist will be placed
         group_box = QGroupBox("Select Export Options")
@@ -127,7 +131,7 @@ class DocumentationGenerationWidget(QWidget):
 
         layout.addWidget(group_box)
         layout.addSpacing(10)
-        layout.addWidget(self.summary_label)
+        layout.addWidget( self.summaryWidget)
         layout.addSpacing(5)
         layout.addWidget(generate_btn, alignment=Qt.AlignCenter)
         
@@ -323,7 +327,7 @@ class DocumentationGenerationWidget(QWidget):
                 gen.generate_step(pcb_path=pcb_file_path, output_step=output_step_path)
                 if log_manager.get_log_level() == "High" or log_manager.get_log_level() == "Medium":
                     QMessageBox.information(self, "Success", f"✅ 3D STEP generated successfully:\n{output_step_path}")
-                self.on_successful_generation(name="Step", state=True)
+                self.on_successful_generation(name="3D_file", state=True)
             except Exception as e:
                 if log_manager.get_log_level() == "High" or log_manager.get_log_level() == "Medium":
                     QMessageBox.critical(self, "Error Generating 3D STEP", str(e))
@@ -350,17 +354,34 @@ class DocumentationGenerationWidget(QWidget):
                 gen.generate_vrml(pcb_path=pcb_file_path, output_vrml=output_vrml_path)
                 if log_manager.get_log_level() == "High" or log_manager.get_log_level() == "Medium":
                     QMessageBox.information(self, "Success", f"✅ 3D STEP generated successfully:\n{output_vrml_path}")
-                self.on_successful_generation(name="VRML", state=True)
+                self.on_successful_generation(name="3D_file", state=True)
             except Exception as e:
                 if log_manager.get_log_level() == "High" or log_manager.get_log_level() == "Medium":
                     QMessageBox.critical(self, "Error Generating 3D VRML", str(e))
-            
-        if checked_items:
-            summary = "Ready to generate: " + ", ".join(checked_items) + "."
-        else:
-            summary = "No options selected."
+        #
+        # if checked_items:
+        #     summary = "Updated Summary " + ", ".join(checked_items) + "."
+        # else:
+        #     summary = "No options selected."
 
-        self.summary_label.setText(summary)
+        # self.summary_label.setText(summary)
+        #geenration summary
+        
+        summarylayout = QHBoxLayout()
+        summarylayout.setSpacing(10)  # space between items
+        summarylayout.setContentsMargins(0, 0, 0, 0)
+
+        for key, value in project_manager.default_states.items():
+            slabel = QLabel()
+            sicon = '✅' if value else '❌'
+            if key == "Schematic_PDF" or  key == "PCB_PDF"  or  key == "Images"  or  key == "Step"  or  key == "VRML" :
+                slabel.setText(f"{key}: {sicon}")
+                slabel.setStyleSheet(
+                    f"color: {'green' if value else 'red'}; font-weight: bold;")
+                summarylayout.addWidget(slabel)
+        
+        self.summaryWidget.setLayout(summarylayout)
+        #layout.addWidget( self.summaryWidget)
 
         project_manager.update_document_tree.emit()#update the project tree
         project_manager.project_progress_status.emit(project_manager.default_states)

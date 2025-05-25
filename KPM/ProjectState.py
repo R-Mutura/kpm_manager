@@ -18,6 +18,9 @@ class ProjectManager(QObject, KpmDatabase):
     update_document_tree = Signal() # Define the signal just a basic signal
     #2. Emits a signal to update the progress bar in the main window to show level of execution in the project
     project_progress_status = Signal(dict) #takes in a disctionart { "name": true/false}
+    #signal to call on change from anywhere
+    log_level_change = Signal(str)
+    
     """the default status of the project to be defined here (signleton slef implemented class so only one state of this will exists)
     so the items in the dict include below:
 
@@ -30,12 +33,13 @@ class ProjectManager(QObject, KpmDatabase):
             "Schematic_PDF": False,
             "PCB_PDF": False,
             "Images": False,
-            "Step": False,
-            "VRML": False,
+            "3D_file": False,
             "BOM": False,
             "Gerber": False,
             "Placement": False,
             "Drill": False,
+            "Reviewed": False,
+            "Verified": False
         }#defined as false on opening of the project manager
 
     def __init__(self):

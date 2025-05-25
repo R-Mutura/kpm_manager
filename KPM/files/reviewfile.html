@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Schematic and PCB Review Checklist</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            background-color: #f7f7f7;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background-color: #ffffff;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+        }
+        ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        li {
+            margin-bottom: 10px;
+        }
+        input[type="checkbox"] {
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Schematic and PCB Layout Review Checklist</h1>
+
+    <div class="section">
+        <h2>RF Circuits</h2>
+        <ul>
+            <li><input type="checkbox"> Verify matching and bias networks near RF ICs</li>
+            <li><input type="checkbox"> Include DC-blocking capacitors and RF chokes</li>
+            <li><input type="checkbox"> Confirm correct antenna impedance and labeling</li>
+            <li><input type="checkbox"> Add input/output filters to suppress out-of-band signals</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>Power Electronics (Buck/Boost/PFC/LLC)</h2>
+        <ul>
+            <li><input type="checkbox"> Confirm feedback and compensation networks for stability</li>
+            <li><input type="checkbox"> Place output filter caps close to inductor and IC</li>
+            <li><input type="checkbox"> Sense feedback after output filter for accurate voltage</li>
+            <li><input type="checkbox"> Verify loop compensation matches design guidelines</li>
+            <li><input type="checkbox"> Add EMI filters and snubbers where appropriate</li>
+            <li><input type="checkbox"> Use low-ESR caps, fast diodes, correct MOSFETs/inductors</li>
+            <li><input type="checkbox"> Include over-current and over-voltage protections</li>
+            <li><input type="checkbox"> Check high-voltage caps and common-mode chokes in PFC</li>
+            <li><input type="checkbox"> Confirm proper pinout and bootstrap/soft-start components</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>Signal Integrity & Organization</h2>
+        <ul>
+            <li><input type="checkbox"> Group schematic sections logically and clearly label</li>
+            <li><input type="checkbox"> Use unique net labels and consistent power rail names</li>
+            <li><input type="checkbox"> Add decoupling caps to every IC’s power pin</li>
+            <li><input type="checkbox"> Annotate all parts with designators and values</li>
+            <li><input type="checkbox"> Follow logical signal flow (“floor plan”)</li>
+            <li><input type="checkbox"> Run ERC/DRC checks and resolve warnings</li>
+            <li><input type="checkbox"> Separate analog/digital blocks and plan grounding strategy</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>PCB: Crosstalk & Signal Routing</h2>
+        <ul>
+            <li><input type="checkbox"> Use controlled-impedance and proper spacing for RF/high-speed lines</li>
+            <li><input type="checkbox"> Route as microstrip/stripline; avoid parallel signal runs</li>
+            <li><input type="checkbox"> Length-match and tightly couple differential pairs</li>
+            <li><input type="checkbox"> Keep fast signals away from power/switching nodes</li>
+            <li><input type="checkbox"> Use internal layers and solid reference planes</li>
+            <li><input type="checkbox"> Avoid routing over gaps in ground planes</li>
+            <li><input type="checkbox"> Stitch ground vias along high-speed paths</li>
+            <li><input type="checkbox"> Avoid stubs or right-angle bends</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>PCB: Grounding & Power Integrity</h2>
+        <ul>
+            <li><input type="checkbox"> Use solid planes for ground and power</li>
+            <li><input type="checkbox"> Tie separate grounds at a single star point</li>
+            <li><input type="checkbox"> Isolate high-voltage ground but connect at one point</li>
+            <li><input type="checkbox"> Place decoupling caps close with short vias</li>
+            <li><input type="checkbox"> Use wide pours for high-current paths</li>
+            <li><input type="checkbox"> Avoid splitting ground planes under critical nets</li>
+            <li><input type="checkbox"> Stitch ground pours to main ground plane</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>Shielding Techniques</h2>
+        <ul>
+            <li><input type="checkbox"> Use grounded copper zones around analog/RF</li>
+            <li><input type="checkbox"> Add guard-ring traces on sensitive nets</li>
+            <li><input type="checkbox"> Apply metal RF shield cans over noisy blocks</li>
+            <li><input type="checkbox"> Shield clocks from analog areas via reference planes</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>Thermal Management & Creepage/Clearance</h2>
+        <ul>
+            <li><input type="checkbox"> Use thermal vias under hot components</li>
+            <li><input type="checkbox"> Include copper pours or heatsinks for heat spreading</li>
+            <li><input type="checkbox"> Allow airflow and follow creepage/clearance rules</li>
+            <li><input type="checkbox"> Use coating or slots for tight clearances</li>
+            <li><input type="checkbox"> Clearly mark high-voltage zones</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>Placement & Partitioning</h2>
+        <ul>
+            <li><input type="checkbox"> Organize the board by function blocks</li>
+            <li><input type="checkbox"> Cluster power parts separately from analog/digital</li>
+            <li><input type="checkbox"> Keep RF chain compact and short</li>
+            <li><input type="checkbox"> Place connectors at board edges</li>
+            <li><input type="checkbox"> Group analog sensors away from digital noise</li>
+            <li><input type="checkbox"> Follow schematic floor plan in layout</li>
+        </ul>
+    </div>
+
+</body>
+</html>

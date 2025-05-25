@@ -147,12 +147,14 @@ class CreateProjectWidget(QWidget):
         #populate the database withthe new project .
         self.db = project_manager.open_sqlite_database()
         if self.db:
-            QMessageBox.warning(
-                None,
-                "Database SetUp Success",
-                f"Opened database"
-                
-            )
+            print("Project opened successfully")
+            # if log_manager.get_log_level() == "High":
+            #     QMessageBox.warning(
+            #         None,
+            #         "Database SetUp Success",
+            #         f"Opened database"
+                    
+            #     )
             # Create table if needed
         if not project_manager.create_project_table(self.db):
             sys.exit(1)
@@ -173,12 +175,25 @@ class CreateProjectWidget(QWidget):
        
         project_progress = project_manager.read_project_progress(self.db, project_manager.get_project_path())
         if(project_progress):
-            print("db_read_data:", project_progress)
-            QMessageBox.information(
-                None,
-                "Loaded Progress",
-                str(project_progress)
-            )
+            if log_manager.get_log_level() == "High":
+                print("db_read_data:", project_progress)
+                QMessageBox.information(
+                    None,
+                    "Loaded Progress",
+                    str(project_progress)
+                )
+
+        ok = project_manager.update_project_loglevel(self.db, project_manager.get_project_path())
+        log_level_state = project_manager.read_project_progress(self.db, project_manager.get_project_path(), item_to_read = "logstate")
+        if log_manager.get_log_level() == "High":
+            if(log_level_state):
+                if log_manager.get_log_level() == "High":
+                    print("Log state level:", log_level_state)
+                    QMessageBox.information(
+                        None,
+                        "Loaded Progress",
+                        str(log_level_state)
+                    )
         #close the db
         project_manager.close_db(self.db)
         

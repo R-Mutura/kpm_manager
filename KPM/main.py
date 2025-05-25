@@ -6,6 +6,7 @@ from PySide6.QtWidgets import (
     QMessageBox
 )
 from PySide6.QtCore import Qt, QStandardPaths
+
 from PySide6.QtGui import QIcon, QPixmap
 from PySide6.QtSql import QSqlDatabase, QSqlQuery
 import os
@@ -25,7 +26,15 @@ from productionfiles_gen_ui import ProductionFilesGeneratorWidget
 
 from ui_elements.log_level_ui import LogLevelWidget
 from ui_elements.progress_bar_logic import ProjectProgressWidget
+from ui_elements.loglevel_logic import CustomLogger
 
+#review elements
+from review_ui import ReviewHTMLViewerWidget
+# path to html path
+# html_path = os.path.join(os.path.dirname(__file__), "files", "reviewfile.html")
+html_path = r"C:\Users\user\Documents\python\kigui\kpm_manager\KPM\files\reviewfile.html"
+# Get the singleton instance
+log_manager = CustomLogger()
 
 # from ProjectState import ProjectManager
 #this will keep track of the current opened/created project across all the files and ui
@@ -73,7 +82,7 @@ class MainWindow(QMainWindow):
             "Create Project": self.load_create_project,
             "Open Project":   self.load_open_project,
             "Generate Documentation": self.load_doc_generator,
-            "Review": self.load_create_project,
+            "Review": self.load_review,
             "Generate Production Files": self.load_production_files,
             "Verify": self.load_create_project,
             # Add more buttons later
@@ -101,7 +110,7 @@ class MainWindow(QMainWindow):
                 text-align: left;
             }
         """
-
+        self.button_widgets = dict()
         for label, func in self.actions.items():
             btn = QPushButton(label)
             btn.setStyleSheet(self.normal_style)
@@ -117,6 +126,9 @@ class MainWindow(QMainWindow):
             left_layout.addWidget(btn)
             self.button[label] = btn
             
+        #load all the button related widgets to a dict / dictionary
+        #this ensures that the widget is instantiated only once and called multiple times in the life of the project without issues
+        #this ensures that whatever changes are made in the widget persists through the lifetime of the application(mainwindow app)
         
         
         self.project_tree_widget = ProjectFileTreeWidget(None)
@@ -141,6 +153,7 @@ class MainWindow(QMainWindow):
         left_layout.addWidget(self.logo_widget)
         
         # Connect signal
+        project_manager.log_level_change.connect(loglevelselector.on_selection_changed)
         project_manager.project_changed.connect(self.on_project_changed)
         project_manager.update_document_tree.connect(self.on_project_update)
         project_manager.project_progress_status.connect(self.updateProjectProgress)
@@ -192,20 +205,32 @@ class MainWindow(QMainWindow):
             self.project_tree_widget.setMaximumHeight(self.height() // 2)
             
     def updateProjectProgress(self, progress_dict):
-        #update progress bar
+       
+        
+
+        if self.active_button:
+            activepage = self.active_button.text()
+            print(f"Active button text: {activepage}")
+            if activepage.strip().lower() == "review":
+                project_manager.default_states["Reviewed"] = True
+                print(project_manager.default_states["Reviewed"])
+         #update progress bar
+         
         print("Progress update received:", progress_dict)
-        self.progressbarstatus.updateProjectProgress(progress_dict)
+        self.progressbarstatus.updateProjectProgress(project_manager.default_states)
+
+        #gets current log level txt
 
         #update metadata in the sqlitebd
         #project_manager.open_sqlite_database()#parameters are already defined upon windows opening and setup
         self.db = project_manager.open_sqlite_database()
-        if self.db:
-            QMessageBox.warning(
-                None,
-                "Database SetUp Success",
-                f"Opened database"
+        # if self.db:
+        #     QMessageBox.warning(
+        #         None,
+        #         "Database SetUp Success",
+        #         f"Opened database"
                 
-            )
+        #     )
             # Create table if needed
         if not project_manager.create_project_table(self.db):
             sys.exit(1)
@@ -216,29 +241,32 @@ class MainWindow(QMainWindow):
         ok = project_manager.update_project_progress(
             self.db,
             project_manager.get_project_path(),
-            progress_dict,
+            project_manager.default_states,
         )
         if not ok:
-            description = "999 testing hii ni nai"
+            description = "redefined description"
             ok = project_manager.insert_or_update_project(
                 self.db,
                 project_manager.get_project_name(),
                 project_manager.get_project_path(),
-                progress_dict,
+                project_manager.default_states,
                 description
             )
             if not ok:
                 sys.exit(1)
         
-        
-        project_progress = project_manager.read_project_progress(self.db, project_manager.get_project_path())
-        if(project_progress):
-            print("db_read_data: ", project_progress)
-            QMessageBox.information(
-                None,
-                "Loaded Progress",
-                str(project_progress)
-            )
+        ok = project_manager.update_project_loglevel(self.db, project_manager.get_project_path(), log_manager.get_log_level())
+        if ok:
+            print("log level state recorded ")
+
+        # project_progress = project_manager.read_project_progress(self.db, project_manager.get_project_path(), item_to_read = "logstate")
+        # if(project_progress):
+        #     print("log level status: ", project_progress)
+        #     QMessageBox.information(
+        #         None,
+        #         "Loaded Progress",
+        #         str(project_progress)
+        #     )
         #close the db
         project_manager.close_db(self.db)
 
@@ -248,6 +276,14 @@ class MainWindow(QMainWindow):
         if is_open:
             self.project_tree_widget.load_project(path)
             self.project_tree_widget.repaint()
+            #then we load all the widgets that will be used in the project hereby instantiating them once for the whole project
+            self.button_widgets = {
+                "documentationWidget": DocumentationGenerationWidget(status_dot=self.dot, status_label=self.status_label, project_name=project_manager.get_project_name(), project_path=project_manager.get_project_path()),
+                "reviewWidget": ReviewHTMLViewerWidget(html_path, project_manager=project_manager),
+                "productionWidget": ProductionFilesGeneratorWidget(status_dot=self.dot, status_label=self.status_label,  project_name=project_manager.get_project_name(), project_path=project_manager.get_project_path()),
+                "verifyWidget": CreateProjectWidget(status_dot=self.dot, status_label=self.status_label),
+                #others widgets to be loaded here
+            }
         else:
             self.project_tree_widget.load_project(None)
             # self.project_tree_widget.tree_widget.clear()
@@ -272,45 +308,75 @@ class MainWindow(QMainWindow):
         # Call the action
         action_function() #eg load_create_project()
         
+    # def clear_right(self):
+    #     for i in reversed(range(self.right_layout.count())):
+    #         widget = self.right_layout.itemAt(i).widget()
+    #         if widget:
+    #             widget.setParent(None)
     def clear_right(self):
         for i in reversed(range(self.right_layout.count())):
-            widget = self.right_layout.itemAt(i).widget()
+            item = self.right_layout.itemAt(i)
+            widget = item.widget()
             if widget:
-                widget.setParent(None)
+                self.right_layout.removeWidget(widget)
+                widget.setVisible(False)  # Optional: hide instead of destroy the right widget
+        
+
+    def load_widget_by_key(self, key: str, title: str):
+        self.right_box.setTitle(title)
+        self.clear_right()
+
+        widget = self.button_widgets.get(key)
+        if widget:
+            widget.setVisible(True)  # In case it was hidden before
+            self.right_layout.addWidget(widget)
+        else:
+            print(f"[Error] Widget with key '{key}' not found.")
 
     def load_create_project(self):
         self.right_box.setTitle("Create Project")
         self.clear_right()
         widget = CreateProjectWidget(status_dot=self.dot, status_label=self.status_label)
         self.right_layout.addWidget(widget)
-        
-        
-    
+          
     def load_open_project(self):
         self.right_box.setTitle("Open Project")
         self.clear_right()
         widget = OpenProjectWidget(status_dot=self.dot, status_label=self.status_label)
         self.right_layout.addWidget(widget)
+
     def load_doc_generator(self):
-        self.right_box.setTitle("Generate Documentation")
+        #self.right_box.setTitle("Generate Documentation")
         self.clear_right()
-        #get the project details i.e name and path from project_manager
-        Namep = project_manager.get_project_name()
-        pathp = project_manager.get_project_path()
-        print(f"Namep: {Namep}")
-        print(f"pathp: {pathp}")
-        widget = DocumentationGenerationWidget(status_dot=self.dot, status_label=self.status_label, project_name=Namep, project_path=pathp)
-        self.right_layout.addWidget(widget)
+        #widget = DocumentationGenerationWidget(status_dot=self.dot, status_label=self.status_label, project_name=Namep, project_path=pathp)
+        # self.right_layout.addWidget(widget)
+        if self.button_widgets:
+            self.load_widget_by_key("documentationWidget","Generate Documentation")
+        
     def load_production_files(self):
-        self.right_box.setTitle("Production Files Generator")
+        #self.right_box.setTitle("Production Files Generator")
         self.clear_right()
         #get the project details i.e name and path from project_manager
-        Namep = project_manager.get_project_name()
-        pathp = project_manager.get_project_path()
-        print(f"Namep: {Namep}")
-        print(f"pathp: {pathp}")
-        widget = ProductionFilesGeneratorWidget(status_dot=self.dot, status_label=self.status_label, project_name=Namep, project_path=pathp)
-        self.right_layout.addWidget(widget)
+        # widget = ProductionFilesGeneratorWidget(status_dot=self.dot, status_label=self.status_label, project_name=Namep, project_path=pathp)
+        # self.right_layout.addWidget(widget)
+        self.load_widget_by_key("productionWidget","Production Files Generator")
+    
+    def load_review(self):
+        #self.right_box.setTitle("Production Files Generator")
+        self.clear_right()
+        #get the project details i.e name and path from project_manager
+        # widget = ProductionFilesGeneratorWidget(status_dot=self.dot, status_label=self.status_label, project_name=Namep, project_path=pathp)
+        # self.right_layout.addWidget(widget)
+        self.load_widget_by_key("reviewWidget","Review Project")
+    
+    def load_verify(self):
+        #self.right_box.setTitle("Production Files Generator")
+        self.clear_right()
+        #get the project details i.e name and path from project_manager
+        # widget = ProductionFilesGeneratorWidget(status_dot=self.dot, status_label=self.status_label, project_name=Namep, project_path=pathp)
+        # self.right_layout.addWidget(widget)
+        self.load_widget_by_key("verifyWidget","Verify Project")
+
 
     
 
