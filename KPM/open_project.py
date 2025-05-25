@@ -111,6 +111,48 @@ class OpenProjectWidget(QWidget):
         #singleton function to manage state of project
         project_manager.set_project(project_name, basefolder)
         
+        self.db = project_manager.open_sqlite_database()
+        if self.db:
+            QMessageBox.warning(
+                None,
+                "Database SetUp Success",
+                f"Opened database"
+                
+            )
+            # Create table if needed
+        if not project_manager.create_project_table(self.db):
+            sys.exit(1)
+
+            #read its current content 
+            
+            #write our data to database
+       
+        project_progress = project_manager.read_project_progress(self.db, project_manager.get_project_path())
+        if(project_progress):
+            print("db_read_data:", project_progress)
+            project_manager.default_states = project_progress #save the project statu and emit a signal to the status bar 
+            project_manager.project_progress_status.emit(project_progress)
+            QMessageBox.information(
+                None,
+                "Loaded Progress",
+                str(project_progress)
+            )
+        else: 
+            #if the project is not present in the data base then we add it
+            ok = project_manager.insert_or_update_project(
+                self.db,
+                project_manager.get_project_name(),
+                project_manager.get_project_path(),
+                project_manager.default_states,
+                description
+            )
+            if not ok:
+                # sys.exit(1)
+                print("Error writing to the database")
+
+        #close the db
+        project_manager.close_db(self.db)
+        #***************************
         print("Project set:")   
         Namep = project_manager.get_project_name()
         pathp = project_manager.get_project_path()

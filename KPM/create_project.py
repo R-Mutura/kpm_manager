@@ -144,7 +144,43 @@ class CreateProjectWidget(QWidget):
             return
        
         project_manager.set_project(name, root_path)
-        
+        #populate the database withthe new project .
+        self.db = project_manager.open_sqlite_database()
+        if self.db:
+            QMessageBox.warning(
+                None,
+                "Database SetUp Success",
+                f"Opened database"
+                
+            )
+            # Create table if needed
+        if not project_manager.create_project_table(self.db):
+            sys.exit(1)
+
+            #read its current content 
+            
+            #write our cata to it
+        description = "to be added"
+        ok = project_manager.insert_or_update_project(
+            self.db,
+            project_manager.get_project_name(),
+            project_manager.get_project_path(),
+            project_manager.default_states,
+            description
+        )
+        if not ok:
+            sys.exit(1)
+       
+        project_progress = project_manager.read_project_progress(self.db, project_manager.get_project_path())
+        if(project_progress):
+            print("db_read_data:", project_progress)
+            QMessageBox.information(
+                None,
+                "Loaded Progress",
+                str(project_progress)
+            )
+        #close the db
+        project_manager.close_db(self.db)
         
         self.tree.clear()
         root = QTreeWidgetItem([name])

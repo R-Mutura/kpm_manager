@@ -2,10 +2,12 @@
 import sys
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout,
-    QHBoxLayout, QPushButton, QGroupBox, QLabel, QFrame
+    QHBoxLayout, QPushButton, QGroupBox, QLabel, QFrame,
+    QMessageBox
 )
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QStandardPaths
 from PySide6.QtGui import QIcon, QPixmap
+from PySide6.QtSql import QSqlDatabase, QSqlQuery
 import os
     # """_summary_
     #    #F68B1F => c85103 => dark orange
@@ -29,7 +31,7 @@ from ui_elements.progress_bar_logic import ProjectProgressWidget
 #this will keep track of the current opened/created project across all the files and ui
 
 class MainWindow(QMainWindow):
-    def __init__(self):
+    def __init__(self, db_file: str):
         super().__init__()
         # Logo Label
         self.logo_widget = QWidget()
@@ -56,6 +58,8 @@ class MainWindow(QMainWindow):
         }
         icon_dir = os.path.join(os.path.dirname(__file__), "icons")
         
+        #det databse path
+        project_manager.set_db_path(db_file)
 
         main_widget = QWidget()
         main_layout = QHBoxLayout(main_widget)
@@ -192,8 +196,51 @@ class MainWindow(QMainWindow):
         print("Progress update received:", progress_dict)
         self.progressbarstatus.updateProjectProgress(progress_dict)
 
-        #update metadata once there are valid changes
-        project_manager.update_metadata(project_manager.get_project_path(), "Progress")
+        #update metadata in the sqlitebd
+        #project_manager.open_sqlite_database()#parameters are already defined upon windows opening and setup
+        self.db = project_manager.open_sqlite_database()
+        if self.db:
+            QMessageBox.warning(
+                None,
+                "Database SetUp Success",
+                f"Opened database"
+                
+            )
+            # Create table if needed
+        if not project_manager.create_project_table(self.db):
+            sys.exit(1)
+
+            #read its current content 
+            
+            #write our data to it // only on the project tab
+        ok = project_manager.update_project_progress(
+            self.db,
+            project_manager.get_project_path(),
+            progress_dict,
+        )
+        if not ok:
+            description = "999 testing hii ni nai"
+            ok = project_manager.insert_or_update_project(
+                self.db,
+                project_manager.get_project_name(),
+                project_manager.get_project_path(),
+                progress_dict,
+                description
+            )
+            if not ok:
+                sys.exit(1)
+        
+        
+        project_progress = project_manager.read_project_progress(self.db, project_manager.get_project_path())
+        if(project_progress):
+            print("db_read_data: ", project_progress)
+            QMessageBox.information(
+                None,
+                "Loaded Progress",
+                str(project_progress)
+            )
+        #close the db
+        project_manager.close_db(self.db)
 
 
     #handle signal emmited on set_project in ProjectState projectstate manager
@@ -265,12 +312,50 @@ class MainWindow(QMainWindow):
         widget = ProductionFilesGeneratorWidget(status_dot=self.dot, status_label=self.status_label, project_name=Namep, project_path=pathp)
         self.right_layout.addWidget(widget)
 
+    
+
+
 if __name__ == "__main__":
     app = QApplication(sys.argv)
+    #--------DATABASE RELATED FUNCTIONALITY-------------#
+    #DEFINE location where this apps metadat/related data will be stored 
+    #this will be handld by the qt-system
+    #in windows the data is tored in C:\Users\user\AppData\Local\MyCompany\KPM
+    #in linux yet to find out ->
+    app.setOrganizationName("KPM")
+    app.setApplicationName("KPM")
+    #define data directory 
+    home = os.path.expanduser("~")  
+    # create directory if it is not there
+    db_file = os.path.join(home, "kpm_projects.db")
+   
+    
+    #os.makedirs(db_file, exist_ok=True)
+    #database class is interited in the project state instance as which allows us to use the project state to mage the database in any way we want
+    #lets use the project_manager to open the database ---> see below after mainwidget is initalized
+    
+    #-------------END OF DATABASE FUNCTIONALITY----------#
+
     icon_path = os.path.join(os.path.dirname(__file__), "icons", "app_icon.png")
     app.setWindowIcon(QIcon(icon_path))
 
-    win = MainWindow()
+    win = MainWindow(db_file)#pass database dir here
+
     win.show()
     win.resize(1000, 500)
+
+    
+    # db = project_manager.open_sqlite_database(db_path = db_file)
+    # if db:
+    #     QMessageBox.warning(
+    #         None,
+    #         "Database SetUp Success",
+    #         f"Opened database"
+            
+    #     )
+    #     project_manager.close_db(db)
+    
+    #NOW CLOSING THE DDB AFTER USE Example
+
+
     sys.exit(app.exec())
