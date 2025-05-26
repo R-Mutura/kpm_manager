@@ -266,7 +266,7 @@ class ProductionFilesGeneratorWidget(QWidget):
             try:
                 genProduction.generate_drill(pcb_path=pcb_file_path, output_dir=output_drill_path)
                 if log_manager.get_log_level() == "High" or log_manager.get_log_level() == "Medium":
-                    geBox.information(self, "Success", f"✅ Drill files generated successfully:\n{output_drill_path}")
+                    QMessageBox.information(self, "Success", f"✅ Drill files generated successfully:\n{output_drill_path}")
                 self.on_successful_generation(name="Drill", state=True)
             except Exception as e:
                 if log_manager.get_log_level() == "High" or log_manager.get_log_level() == "Medium":
@@ -309,24 +309,43 @@ class ProductionFilesGeneratorWidget(QWidget):
         summarylayout = QHBoxLayout()
         summarylayout.setSpacing(10)  # space between items
         summarylayout.setContentsMargins(0, 0, 0, 0)
-
+        
         for key, value in project_manager.default_states.items():
             slabel = QLabel()
             sicon = '✅' if value else '❌'
-            if key == "BOM" or  key == "Gerber"  or  key == "Placement"  or  key == "Drill":
+            if key == "BOM" or  key == "Gerber"  or  key == "Placement"  or  key == "Drill"  :
                 slabel.setText(f"{key}: {sicon}")
                 slabel.setStyleSheet(
                     f"color: {'green' if value else 'red'}; font-weight: bold;")
                 summarylayout.addWidget(slabel)
         
         self.summaryWidget.setLayout(summarylayout)
-        
+        self.summaryWidget.repaint()
 
         # lets emit a signal here that will be used to update the tree and redraw it. the tree is in main
         project_manager.update_document_tree.emit() # Emit the signal
 
         project_manager.project_progress_status.emit(project_manager.default_states)
 
+    def update_summary_widget(self):
+        summary_widget = self.button_widgets["documentationWidget"].summaryWidget
+
+        # 1. Clear existing layout
+        old_layout = summary_widget.layout()
+        if old_layout is not None:
+            # Remove all widgets from old layout
+            while old_layout.count():
+                item = old_layout.takeAt(0)
+                widget = item.widget()
+                if widget is not None:
+                    widget.setParent(None)
+            QWidget().setLayout(old_layout)  # Safe way to delete old layout
+
+        # 2. Create and set new layout
+        new_layout = self.build_new_summary_layout()
+        summary_widget.setLayout(new_layout)
+        summary_widget.update()  # Optionally force redraw
+        summary_widget.repaint()  # Extra safety
         
         
 

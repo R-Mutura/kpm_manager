@@ -28,7 +28,10 @@ class ProjectManager(QObject, KpmDatabase):
 
     #3 handle project opening and closing.
     project_changed = Signal(str, bool, str)  #updates the current project
-
+    # Emit (project_name, is_open, project_path)
+    
+    #checklist to handle the default states of the project
+    #this is used to handle the default states of the project when it is opened
     default_states = {
             "Schematic_PDF": False,
             "PCB_PDF": False,
@@ -42,6 +45,8 @@ class ProjectManager(QObject, KpmDatabase):
             "Verified": False
         }#defined as false on opening of the project manager
 
+    #checklist to handle verification process in the last tab
+    verification_checklist = []
     def __init__(self):
         #super().__init__() #not used in double inheritances
         QObject.__init__(self)  # Initialize QObject part

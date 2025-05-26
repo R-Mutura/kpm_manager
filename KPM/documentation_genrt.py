@@ -374,7 +374,7 @@ class DocumentationGenerationWidget(QWidget):
         for key, value in project_manager.default_states.items():
             slabel = QLabel()
             sicon = '✅' if value else '❌'
-            if key == "Schematic_PDF" or  key == "PCB_PDF"  or  key == "Images"  or  key == "Step"  or  key == "VRML" :
+            if key == "Schematic_PDF" or  key == "PCB_PDF"  or  key == "Images"  or  key == "3D_file"  :
                 slabel.setText(f"{key}: {sicon}")
                 slabel.setStyleSheet(
                     f"color: {'green' if value else 'red'}; font-weight: bold;")

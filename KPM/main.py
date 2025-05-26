@@ -1,9 +1,10 @@
+#10:01 AM 5/26/202510:01 AM 5/26/2025
 # main.py
 import sys
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout,
     QHBoxLayout, QPushButton, QGroupBox, QLabel, QFrame,
-    QMessageBox
+    QMessageBox, QLayout
 )
 from PySide6.QtCore import Qt, QStandardPaths
 
@@ -27,12 +28,14 @@ from productionfiles_gen_ui import ProductionFilesGeneratorWidget
 from ui_elements.log_level_ui import LogLevelWidget
 from ui_elements.progress_bar_logic import ProjectProgressWidget
 from ui_elements.loglevel_logic import CustomLogger
+from ui_elements.summarywidget_ui import SummaryWidget
+from ui_elements.verification_ui import VerifyWidgetui
 
 #review elements
 from review_ui import ReviewHTMLViewerWidget
 # path to html path
-# html_path = os.path.join(os.path.dirname(__file__), "files", "reviewfile.html")
-html_path = r"C:\Users\user\Documents\python\kigui\kpm_manager\KPM\files\reviewfile.html"
+html_path = os.path.join(os.path.dirname(__file__), "files", "reviewfile.html")
+#html_path = r"C:\Users\user\Documents\python\kigui\kpm_manager\KPM\files\reviewfile.html"
 # Get the singleton instance
 log_manager = CustomLogger()
 
@@ -84,7 +87,7 @@ class MainWindow(QMainWindow):
             "Generate Documentation": self.load_doc_generator,
             "Review": self.load_review,
             "Generate Production Files": self.load_production_files,
-            "Verify": self.load_create_project,
+            "Verify": self.load_verify,
             # Add more buttons later
         }
         self.button = {}
@@ -206,8 +209,6 @@ class MainWindow(QMainWindow):
             
     def updateProjectProgress(self, progress_dict):
        
-        
-
         if self.active_button:
             activepage = self.active_button.text()
             print(f"Active button text: {activepage}")
@@ -219,8 +220,79 @@ class MainWindow(QMainWindow):
         print("Progress update received:", progress_dict)
         self.progressbarstatus.updateProjectProgress(project_manager.default_states)
 
-        #gets current log level txt
+        #update the summary table
+        if self.active_button:
+            activepage = self.active_button.text()
+            print(f"Active button text: {activepage}")
+            if activepage.strip().lower() == "generate documentation":
+                doc_widget = self.button_widgets["documentationWidget"]
+                old_summary_widget = doc_widget.summaryWidget
+                print("button: ", activepage.strip().lower())
 
+                # Get the parent layout where the summaryWidget lives
+                parent_layout = old_summary_widget.parentWidget().layout()
+                if parent_layout is not None:
+                    # Find and remove the old widget from the layout
+                    for i in range(parent_layout.count()):
+                        item = parent_layout.itemAt(i)
+                        if item and item.widget() == old_summary_widget:
+                            old_widget = parent_layout.takeAt(i).widget()
+                            if old_widget:
+                                old_widget.setParent(None)
+                            break
+
+                # Create and insert new SummaryWidget
+                new_summary_widget = SummaryWidget(project_manager, activepage.strip().lower())
+                doc_widget.summaryWidget = new_summary_widget  # update reference
+                parent_layout.insertWidget(i, new_summary_widget)  # insert at same position   
+
+            elif activepage.strip().lower() == "generate production files":
+                
+                doc_widget = self.button_widgets["productionWidget"]
+                old_summary_widget = doc_widget.summaryWidget
+                print("button: ", activepage.strip().lower())
+
+                # Get the parent layout where the summaryWidget lives
+                parent_layout = old_summary_widget.parentWidget().layout()
+                if parent_layout is not None:
+                    # Find and remove the old widget from the layout
+                    for i in range(parent_layout.count()):
+                        item = parent_layout.itemAt(i)
+                        if item and item.widget() == old_summary_widget:
+                            old_widget = parent_layout.takeAt(i).widget()
+                            if old_widget:
+                                old_widget.setParent(None)
+                            break
+
+                # Create and insert new SummaryWidget
+                new_summary_widget = SummaryWidget(project_manager, activepage.strip().lower())
+                doc_widget.summaryWidget = new_summary_widget  # update reference
+                parent_layout.insertWidget(i, new_summary_widget)  # insert at same position 
+            
+            elif activepage.strip().lower() == "verify":
+                # Handle the verification summary update
+                doc_widget = self.button_widgets["verifyWidget"]
+                old_summary_widget = doc_widget.summaryWidget
+                print("button: ", activepage.strip().lower())
+
+                # Get the parent layout where the summaryWidget lives
+                parent_layout = old_summary_widget.parentWidget().layout()
+                if parent_layout is not None:
+                    # Find and remove the old widget from the layout
+                    for i in range(parent_layout.count()):
+                        item = parent_layout.itemAt(i)
+                        if item and item.widget() == old_summary_widget:
+                            old_widget = parent_layout.takeAt(i).widget()
+                            if old_widget:
+                                old_widget.setParent(None)
+                            break
+
+                # Create and insert new SummaryWidget
+                new_summary_widget = SummaryWidget(project_manager, activepage.strip().lower(), checked_items=project_manager.verification_checklist)
+                #print("new summary widget: ", new_summary_widget)
+                doc_widget.summaryWidget = new_summary_widget  # update reference
+                parent_layout.insertWidget(i, new_summary_widget)  # insert at same position 
+                
         #update metadata in the sqlitebd
         #project_manager.open_sqlite_database()#parameters are already defined upon windows opening and setup
         self.db = project_manager.open_sqlite_database()
@@ -233,10 +305,7 @@ class MainWindow(QMainWindow):
         #     )
             # Create table if needed
         if not project_manager.create_project_table(self.db):
-            sys.exit(1)
-
-            #read its current content 
-            
+            sys.exit(1)            
             #write our data to it // only on the project tab
         ok = project_manager.update_project_progress(
             self.db,
@@ -281,7 +350,7 @@ class MainWindow(QMainWindow):
                 "documentationWidget": DocumentationGenerationWidget(status_dot=self.dot, status_label=self.status_label, project_name=project_manager.get_project_name(), project_path=project_manager.get_project_path()),
                 "reviewWidget": ReviewHTMLViewerWidget(html_path, project_manager=project_manager),
                 "productionWidget": ProductionFilesGeneratorWidget(status_dot=self.dot, status_label=self.status_label,  project_name=project_manager.get_project_name(), project_path=project_manager.get_project_path()),
-                "verifyWidget": CreateProjectWidget(status_dot=self.dot, status_label=self.status_label),
+                "verifyWidget": VerifyWidgetui(project_manager=project_manager)
                 #others widgets to be loaded here
             }
         else:
@@ -362,6 +431,14 @@ class MainWindow(QMainWindow):
         self.load_widget_by_key("productionWidget","Production Files Generator")
     
     def load_review(self):
+        #self.right_box.setTitle("Production Files Generator")
+        self.clear_right()
+        #get the project details i.e name and path from project_manager
+        # widget = ProductionFilesGeneratorWidget(status_dot=self.dot, status_label=self.status_label, project_name=Namep, project_path=pathp)
+        # self.right_layout.addWidget(widget)
+        self.load_widget_by_key("reviewWidget","Review Project")
+    
+    def load_verify(self):
         #self.right_box.setTitle("Production Files Generator")
         self.clear_right()
         #get the project details i.e name and path from project_manager

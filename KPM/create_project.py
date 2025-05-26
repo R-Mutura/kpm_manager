@@ -197,6 +197,31 @@ class CreateProjectWidget(QWidget):
         #close the db
         project_manager.close_db(self.db)
         
+                # Ask to create .kicad_pro file
+        reply = QMessageBox.question(
+            self,
+            "Create KiCad Project?",
+            f"Do you want to create a KiCad project file in the SRC folder?\n\nIt will be named '{name}.kicad_pro'.",
+            QMessageBox.Ok | QMessageBox.Cancel
+        )
+
+        if reply == QMessageBox.Ok:
+            kicad_project_path = os.path.join(root_path, "SRC", f"{name}.kicad_pro")
+            try:
+                with open(kicad_project_path, "w") as kicad_file:
+                    kicad_file.write('')  # Write minimal data if needed
+
+                # Open with default app
+                if sys.platform.startswith("win"):
+                    os.startfile(kicad_project_path)
+                elif sys.platform.startswith("darwin"):
+                    os.system(f"open '{kicad_project_path}'")
+                else:
+                    os.system(f"xdg-open '{kicad_project_path}'")
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Failed to create or open KiCad project:\n{e}")
+
+        
         self.tree.clear()
         root = QTreeWidgetItem([name])
         #! update this to print out all the items in the folder not a static

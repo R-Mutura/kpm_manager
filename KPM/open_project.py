@@ -143,9 +143,10 @@ class OpenProjectWidget(QWidget):
 
         project_progress = project_manager.read_project_progress(self.db, project_manager.get_project_path())
         if(project_progress):
-            print("db_read_data:", project_progress)
+            
             project_manager.default_states = project_progress #save the project statu and emit a signal to the status bar 
-            project_manager.project_progress_status.emit(project_progress)
+            print("db_read_data:",  project_manager.default_states)
+            project_manager.project_progress_status.emit( project_manager.default_states)
             # if log_manager.get_log_level() == "High":
             #     QMessageBox.information(
             #         None,
