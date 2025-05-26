@@ -63,6 +63,7 @@ class VerifyWidgetui(QWidget):
         self.documented_cb = QCheckBox("Ensure full documentation is generated")
         self.testpoint_cb = QCheckBox("Add Testpoints on power and communication lines")
         self.production_cb = QCheckBox("Regenerate all the Production Files")
+        self.BOM_cb = QCheckBox("Populate all Bom Manufacturer Part #\n Ensure availability of componenets")
                 
         # Add checkboxes to layout
         self.checklistlayout.addWidget(self.sch_reviewed_cb)
@@ -72,6 +73,7 @@ class VerifyWidgetui(QWidget):
         self.checklistlayout.addWidget(self.documented_cb)
         self.checklistlayout.addWidget(self.testpoint_cb)
         self.checklistlayout.addWidget(self.production_cb)
+        self.checklistlayout.addWidget(self.BOM_cb)
         
         group_box.setLayout(self.checklistlayout)
         
@@ -119,6 +121,9 @@ class VerifyWidgetui(QWidget):
         if self.production_cb.isChecked():
             checked_items.append("Production Files")
             # Extract base name again if needed
+        if self.BOM_cb.isChecked():
+            checked_items.append("BOM Updated")
+            # Extract base name again if needed
         
         self.project_manager.verification_checklist = checked_items
         
@@ -136,7 +141,7 @@ class VerifyWidgetui(QWidget):
             summarylayout.addWidget(slabel)
         
         self.summaryWidget.setLayout(summarylayout)
-        if len(checked_items) == 7:
+        if len(checked_items) == 8:
             self.project_manager.default_states["Verified"] = True
             QMessageBox.information(
             self,

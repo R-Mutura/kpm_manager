@@ -30,6 +30,7 @@ from ui_elements.progress_bar_logic import ProjectProgressWidget
 from ui_elements.loglevel_logic import CustomLogger
 from ui_elements.summarywidget_ui import SummaryWidget
 from ui_elements.verification_ui import VerifyWidgetui
+from ui_elements.settings_ui import SettingsWidget
 
 #review elements
 from review_ui import ReviewHTMLViewerWidget
@@ -66,7 +67,8 @@ class MainWindow(QMainWindow):
             "Generate Documentation": "documentation.png",
             "Review": "review.png",
             "Generate Production Files": "production.png",
-            "Verify": "verify.png"
+            "Verify": "verify.png",
+            "Settings": "settings.png"
         }
         icon_dir = os.path.join(os.path.dirname(__file__), "icons")
         
@@ -88,6 +90,7 @@ class MainWindow(QMainWindow):
             "Review": self.load_review,
             "Generate Production Files": self.load_production_files,
             "Verify": self.load_verify,
+            "Settings": self.load_settings,
             # Add more buttons later
         }
         self.button = {}
@@ -350,7 +353,8 @@ class MainWindow(QMainWindow):
                 "documentationWidget": DocumentationGenerationWidget(status_dot=self.dot, status_label=self.status_label, project_name=project_manager.get_project_name(), project_path=project_manager.get_project_path()),
                 "reviewWidget": ReviewHTMLViewerWidget(html_path, project_manager=project_manager),
                 "productionWidget": ProductionFilesGeneratorWidget(status_dot=self.dot, status_label=self.status_label,  project_name=project_manager.get_project_name(), project_path=project_manager.get_project_path()),
-                "verifyWidget": VerifyWidgetui(project_manager=project_manager)
+                "verifyWidget": VerifyWidgetui(project_manager=project_manager),
+                "settingsWidget": SettingsWidget(project_manager=project_manager)
                 #others widgets to be loaded here
             }
         else:
@@ -438,13 +442,14 @@ class MainWindow(QMainWindow):
         # self.right_layout.addWidget(widget)
         self.load_widget_by_key("reviewWidget","Review Project")
     
-    def load_verify(self):
-        #self.right_box.setTitle("Production Files Generator")
+    def load_settings(self):
+        self.right_box.setTitle("Settings")
         self.clear_right()
-        #get the project details i.e name and path from project_manager
-        # widget = ProductionFilesGeneratorWidget(status_dot=self.dot, status_label=self.status_label, project_name=Namep, project_path=pathp)
-        # self.right_layout.addWidget(widget)
-        self.load_widget_by_key("reviewWidget","Review Project")
+        widget = SettingsWidget(project_manager=project_manager)
+        self.right_layout.addWidget(widget)
+        
+        # self.clear_right()
+        # self.load_widget_by_key("settingsWidget","Settings")
     
     def load_verify(self):
         #self.right_box.setTitle("Production Files Generator")

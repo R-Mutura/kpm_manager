@@ -1,6 +1,8 @@
 import os
 import sys
 import datetime
+import json
+import subprocess
 
 from PySide6.QtWidgets import (
     QApplication, QHBoxLayout, QMainWindow, QFileDialog,
@@ -28,7 +30,7 @@ class CreateProjectWidget(QWidget):
         super().__init__()
         self.dot = status_dot
         self.status_label = status_label
-
+        self.kicad_cli = project_manager.get_kicad_cli()
         layout = QVBoxLayout(self)
 
         # Project folder path with Browse button
@@ -196,28 +198,60 @@ class CreateProjectWidget(QWidget):
                     )
         #close the db
         project_manager.close_db(self.db)
-        
-                # Ask to create .kicad_pro file
         reply = QMessageBox.question(
             self,
             "Create KiCad Project?",
             f"Do you want to create a KiCad project file in the SRC folder?\n\nIt will be named '{name}.kicad_pro'.",
             QMessageBox.Ok | QMessageBox.Cancel
         )
-
         if reply == QMessageBox.Ok:
-            kicad_project_path = os.path.join(root_path, "SRC", f"{name}.kicad_pro")
-            try:
-                with open(kicad_project_path, "w") as kicad_file:
-                    kicad_file.write('')  # Write minimal data if needed
+            project_dir = os.path.join(root_path, "SRC", name)
+            os.makedirs(project_dir, exist_ok=True)
+            
+            kicad_project_path = os.path.join(project_dir, f"{name}.kicad_pro")
+            
 
-                # Open with default app
+            try:
+                # 1. Create empty schematic and PCB files
+                # subprocess.run([self.kicad_cli, "schematic", "new", schematic_path])
+                # subprocess.run([self.kicad_cli, "pcb", "create", pcb_path])
+
+                # 2. Populate the .kicad_pro with references
+                #! note: this can be removed if it causes compatability issues in your kicad verion
+                project_data = {
+                    "version": 1,
+                    "project": {
+                        "title": name,
+                        "date": datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                        "rev": "A1",
+                        "company": "MyCompany",
+                        "schematic": f"{name}.kicad_sch",
+                        "board": f"{name}.kicad_pcb",
+                        "page_layout": "kicad",
+                        "paper": "A4"
+                    },
+                    "libraries": {
+                        "symbols": [{"name": "Device", "type": "global"}],
+                        "footprints": [{"name": "kicad-footprints", "type": "global"}]
+                    },
+                    "metadata": {
+                        "created_with": "kpm-tool",
+                        "last_updated": datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                    }
+                }
+
+                with open(kicad_project_path, "w") as kicad_file:
+                    json.dump(project_data, kicad_file, indent=2)
+                    
+                    
+                # 3. Open with system default
                 if sys.platform.startswith("win"):
                     os.startfile(kicad_project_path)
                 elif sys.platform.startswith("darwin"):
                     os.system(f"open '{kicad_project_path}'")
                 else:
                     os.system(f"xdg-open '{kicad_project_path}'")
+
             except Exception as e:
                 QMessageBox.critical(self, "Error", f"Failed to create or open KiCad project:\n{e}")
 
