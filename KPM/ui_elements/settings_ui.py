@@ -1,75 +1,60 @@
-from PySide6.QtWidgets import (
-    QWidget, QLabel, QVBoxLayout, QPushButton,
-    QFileDialog, QLineEdit, QHBoxLayout, QApplication
-)
 import sys
+from PySide6.QtWidgets import (
+    QApplication, QWidget, QPushButton, QLabel, QFileDialog, QVBoxLayout, QDialog, QHBoxLayout
+)
+from PySide6.QtCore import QSettings
 
-class SettingsWidget(QWidget):
-    def __init__(self, project_manager=None, parent=None):
+
+class PathSelectorPopup(QDialog):
+    def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("KiCad Project Settings")
-        self.layout = QVBoxLayout(self)
+        self.setWindowTitle("Select Kicad-cli.exe Path")
+        
+        self.resize(400, 150)
 
-        # KiCad Installation Directory
-        self.kicad_bin_path_edit = QLineEdit()
-        self.kicad_bin_path_button = QPushButton("Select KiCad Installation Directory")
-        self.kicad_bin_path_button.clicked.connect(self.select_kicad_bin_path)
+        self.selected_path =""
+        # Create layout and widgets
+        self.label = QLabel("No path selected", self)
+        self.select_button = QPushButton("Browse...", self)
+        self.save_button = QPushButton("Save")
+        self.cancel_button = QPushButton("Cancel")
 
-        self.layout.addLayout(self._labeled_path_field("KiCad Installation Directory", self.kicad_bin_path_edit, self.kicad_bin_path_button))
+        self.select_button.clicked.connect(self.browse_path)
+        self.save_button.clicked.connect(self.accept)
+        self.cancel_button.clicked.connect(self.reject)
 
-        # Library Directory
-        self.library_path_edit = QLineEdit()
-        self.library_path_button = QPushButton("Select Library Path")
-        self.library_path_button.clicked.connect(self.select_library_path)
+        # Layout
+        btn_layout = QHBoxLayout()
+        btn_layout.addWidget(self.save_button)
+        btn_layout.addWidget(self.cancel_button)
 
-        self.layout.addLayout(self._labeled_path_field("Library Path", self.library_path_edit, self.library_path_button))
+        layout = QVBoxLayout(self)
+        layout.addWidget(self.label)
+        layout.addWidget(self.select_button)
+        layout.addLayout(btn_layout)
 
-        # Stub Buttons (just show placeholder messages)
-        stub_buttons = {
-            "Page Layout": self.stub_function,
-            "Net Settings": self.stub_function,
-            "Design Rules": self.stub_function,
-            "Simulation Config": self.stub_function,
-            "Project Metadata": self.stub_function,
-        }
 
-        for label, func in stub_buttons.items():
-            btn = QPushButton(label)
-            btn.clicked.connect(func)
-            self.layout.addWidget(btn)
+        # Load saved path
+        # self.settings = QSettings("MyCompany", "MyApp")
+        # saved_path = self.settings.value("executable_path", "")
+        # if saved_path:
+        #     self.label.setText(f"Saved path: {saved_path}")
 
-        # Optional: Add spacing at the bottom
-        self.layout.addStretch()
-
-    def _labeled_path_field(self, label_text, line_edit, button):
-        layout = QVBoxLayout()
-        label = QLabel(label_text)
-        h_layout = QHBoxLayout()
-        h_layout.addWidget(line_edit)
-        h_layout.addWidget(button)
-        layout.addWidget(label)
-        layout.addLayout(h_layout)
-        return layout
-
-    def select_kicad_bin_path(self):
-        path = QFileDialog.getExistingDirectory(self, "Select KiCad Installation Directory")
+        
+    def browse_path(self):
+        path, _ = QFileDialog.getOpenFileName(self, "KiCAD-CLI.exe File Executable")
         if path:
-            self.kicad_bin_path_edit.setText(path)
+            self.selected_path = path
+            self.label.setText(f"Saved path: {self.selected_path}")
+            
+            #self.label.setText(f"Selected: {path}")
+            #self.settings.setValue("executable_path", path)
+    def get_selected_path(self):
+        return self.selected_path
 
-    def select_library_path(self):
-        path = QFileDialog.getExistingDirectory(self, "Select KiCad Library Directory")
-        if path:
-            self.library_path_edit.setText(path)
 
-    def stub_function(self):
-        sender = self.sender()
-        label = sender.text()
-        print(f"{label}: Functionality to be added later.")
-
-# Standalone testing
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    win = SettingsWidget()
-    win.resize(500, 300)
-    win.show()
+    popup = PathSelectorPopup()
+    popup.show()
     sys.exit(app.exec())

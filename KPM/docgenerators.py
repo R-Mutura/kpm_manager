@@ -4,22 +4,28 @@ import os
 import sys
 import platform
 import subprocess
+from utils import get_app_settings
 
 class DocGeneratorKiCLI:
     def __init__(self, project_name=None, project_path=None):
         self.projectName = project_name
         self.projectPath = project_path
 
-        # Decide which kicad-cli to call based on our OS
-        os_type = DocGeneratorKiCLI.current_os()
-        if os_type == "windows":
-            self.kicad_cli = r"C:\Program Files\KiCad\9.0\bin\kicad-cli.exe"
-        elif os_type == "wsl":
-            # if you want to call the Windows exe from WSL
-            self.kicad_cli = "/mnt/c/Program Files/KiCad/9.0/bin/kicad-cli.exe"
-        else:
-            # assume it's on your $PATH (Linux/macOS install)
-            self.kicad_cli = "kicad-cli"
+        kicad_executable = get_app_settings()
+
+        self.kicad_cli = kicad_executable.value("kicad_cli_exec", "")
+
+
+        # # Decide which kicad-cli to call based on our OS
+        # os_type = DocGeneratorKiCLI.current_os()
+        # if os_type == "windows":
+        #     self.kicad_cli = r"C:\Program Files\KiCad\9.0\bin\kicad-cli.exe"
+        # elif os_type == "wsl":
+        #     # if you want to call the Windows exe from WSL
+        #     self.kicad_cli = "/mnt/c/Program Files/KiCad/9.0/bin/kicad-cli.exe"
+        # else:
+        #     # assume it's on your $PATH (Linux/macOS install)
+        #     self.kicad_cli = "kicad-cli"
 
     # ─── Platform Detection ─────────────────────────────────────────
     @staticmethod

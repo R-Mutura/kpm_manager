@@ -53,6 +53,7 @@ class ProjectManager(QObject, KpmDatabase):
     verification_checklist = []
     #KICAD_CLI = "" #HOLDS THE PATH TO THE KICAD_CLI depending on the OS used
         #function below will be used to set the cli path
+    kicad_cli_executable = "kicad_cli_exec"
 
     def __init__(self):
         #super().__init__() #not used in double inheritances

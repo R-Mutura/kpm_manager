@@ -4,9 +4,9 @@ import sys
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout,
     QHBoxLayout, QPushButton, QGroupBox, QLabel, QFrame,
-    QMessageBox, QLayout
+    QMessageBox, QLayout, QDialog, QSizePolicy, 
 )
-from PySide6.QtCore import Qt, QStandardPaths
+from PySide6.QtCore import Qt, QStandardPaths, QSettings
 
 from PySide6.QtGui import QIcon, QPixmap
 from PySide6.QtSql import QSqlDatabase, QSqlQuery
@@ -18,6 +18,7 @@ import os
     # """
 # color schem used for icon on the  KPM logo
 
+from utils import get_app_settings
 from global_project_manager import project_manager 
 from create_project import CreateProjectWidget
 from open_project import OpenProjectWidget
@@ -30,7 +31,7 @@ from ui_elements.progress_bar_logic import ProjectProgressWidget
 from ui_elements.loglevel_logic import CustomLogger
 from ui_elements.summarywidget_ui import SummaryWidget
 from ui_elements.verification_ui import VerifyWidgetui
-from ui_elements.settings_ui import SettingsWidget
+from ui_elements.settings_ui import PathSelectorPopup
 
 #review elements
 from review_ui import ReviewHTMLViewerWidget
@@ -47,9 +48,12 @@ class MainWindow(QMainWindow):
     def __init__(self, db_file: str):
         super().__init__()
         # Logo Label
+        kpm_settings = get_app_settings()
+        kicad_exectable_text = kpm_settings.value(project_manager.kicad_cli_executable, "")
+        self.kicad_cli_path_label = QLabel(f"{kicad_exectable_text}")
         self.logo_widget = QWidget()
         logo_layout = QVBoxLayout(self.logo_widget)
-        logo_layout.setContentsMargins(0, 10, 0, 10)
+        logo_layout.setContentsMargins(0, 5, 0, 5)
         logo_layout.setAlignment(Qt.AlignCenter)
 
         logo_label = QLabel()
@@ -58,7 +62,13 @@ class MainWindow(QMainWindow):
         logo_label.setPixmap(logo_pixmap)
         logo_label.setAlignment(Qt.AlignCenter)
         
+        self.kicad_cli_path_label.setAlignment(Qt.AlignLeft)
+        self.kicad_cli_path_label.setFixedWidth(200)
+        self.kicad_cli_path_label.setWordWrap(True)
+
+        logo_layout.addWidget(self.kicad_cli_path_label)
         logo_layout.addWidget(logo_label)
+
         
         self.setWindowTitle("KiCAD Project Manager")
         icons = {
@@ -68,7 +78,7 @@ class MainWindow(QMainWindow):
             "Review": "review.png",
             "Generate Production Files": "production.png",
             "Verify": "verify.png",
-            "Settings": "settings.png"
+            # "Settings": "settings.png"
         }
         icon_dir = os.path.join(os.path.dirname(__file__), "icons")
         
@@ -90,7 +100,7 @@ class MainWindow(QMainWindow):
             "Review": self.load_review,
             "Generate Production Files": self.load_production_files,
             "Verify": self.load_verify,
-            "Settings": self.load_settings,
+            
             # Add more buttons later
         }
         self.button = {}
@@ -131,6 +141,18 @@ class MainWindow(QMainWindow):
             btn.clicked.connect(lambda _, b=btn, f=func: self.handle_button_click(b, f))
             left_layout.addWidget(btn)
             self.button[label] = btn
+        
+        #add a settings cuttons
+        settings_icon_path = os.path.join(icon_dir, "settings.png")
+        self.settings_btn = QPushButton("Settings")
+        if os.path.exists(settings_icon_path):
+            self.settings_btn.setIcon(QIcon(settings_icon_path))
+        
+        self.settings_btn.setStyleSheet(self.normal_style)
+        
+        self.settings_btn.clicked.connect(self.load_settings_popup)
+        left_layout.addWidget(self.settings_btn)
+        
             
         #load all the button related widgets to a dict / dictionary
         #this ensures that the widget is instantiated only once and called multiple times in the life of the project without issues
@@ -203,6 +225,7 @@ class MainWindow(QMainWindow):
 
         self.setCentralWidget(main_widget)
     # START OF FUNTION    
+
     def resizeEvent(self, event):
         #resize theproject tree widget dynamically
         # Adjust the maximum height of the project tree widget based on the window height
@@ -354,7 +377,7 @@ class MainWindow(QMainWindow):
                 "reviewWidget": ReviewHTMLViewerWidget(html_path, project_manager=project_manager),
                 "productionWidget": ProductionFilesGeneratorWidget(status_dot=self.dot, status_label=self.status_label,  project_name=project_manager.get_project_name(), project_path=project_manager.get_project_path()),
                 "verifyWidget": VerifyWidgetui(project_manager=project_manager),
-                "settingsWidget": SettingsWidget(project_manager=project_manager)
+                
                 #others widgets to be loaded here
             }
         else:
@@ -442,14 +465,7 @@ class MainWindow(QMainWindow):
         # self.right_layout.addWidget(widget)
         self.load_widget_by_key("reviewWidget","Review Project")
     
-    def load_settings(self):
-        self.right_box.setTitle("Settings")
-        self.clear_right()
-        widget = SettingsWidget(project_manager=project_manager)
-        self.right_layout.addWidget(widget)
-        
-        # self.clear_right()
-        # self.load_widget_by_key("settingsWidget","Settings")
+    
     
     def load_verify(self):
         #self.right_box.setTitle("Production Files Generator")
@@ -458,6 +474,54 @@ class MainWindow(QMainWindow):
         # widget = ProductionFilesGeneratorWidget(status_dot=self.dot, status_label=self.status_label, project_name=Namep, project_path=pathp)
         # self.right_layout.addWidget(widget)
         self.load_widget_by_key("verifyWidget","Verify Project")
+
+    def load_settings_popup(self):
+        #remove active color on current button
+        if self.active_button:
+            self.active_button.setStyleSheet(self.normal_style)
+        #apply active color to settings
+        self.settings_btn.setStyleSheet(self.active_style)
+        #init the settings widget and do the necessary selections
+        self.ki_popup_settings = PathSelectorPopup(self)
+        path_result  = self.ki_popup_settings.exec() # Modal, blocks until closed
+
+        if path_result == QDialog.Accepted:
+            new_path = self.ki_popup_settings.get_selected_path()
+            if not new_path:
+                print("No KiCad-ccli path provided.")
+                QMessageBox.critical(self, "Error", "Please provide a valid KiCad installation file.")
+                return
+            
+            if not os.path.isfile(new_path) or not new_path.lower().endswith("kicad-cli.exe"):
+                QMessageBox.critical(
+                    self,
+                    "Error",
+                    f"'kicad-cli.exe' not found or invalid file selected:\n{new_path}"
+                )
+                return
+            if not os.access(new_path, os.X_OK):
+                QMessageBox.critical(self, "Error", f"'kicad-cli.exe' is not executable:\n{new_path}")
+                return
+            
+
+            if new_path:
+                print(f"Executable: {new_path}")
+                self.kicad_cli_path_label.setText(f"{new_path}")
+                self.kpm_settings = get_app_settings()
+                self.kpm_settings.setValue(project_manager.kicad_cli_executable, new_path)
+                print(f"Settings popup : {path_result}")
+
+        
+        
+        #save the file to a retrievable point with QSettings
+        
+        
+
+        #remove active color setting to setting button
+        self.settings_btn.setStyleSheet(self.normal_style)
+        #restore color to the previously active button
+        if self.active_button:
+            self.active_button.setStyleSheet(self.active_style)
 
 
     

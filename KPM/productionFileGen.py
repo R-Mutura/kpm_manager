@@ -3,26 +3,36 @@ import sys
 import os
 import platform
 import subprocess
-
+from utils import get_app_settings
 
 class ProductionFilesGeneratorKICLI:
     def __init__(self, project_name=None, project_path=None):
         # self.kicad_cli = kicad_cli_path
         self.projectName = project_name
         self.projectPath = project_path
+
+        kicad_executable = get_app_settings()
+
+        self.kicad_cli = kicad_executable.value("kicad_cli_exec", "")
+        #print(f"production_file: {self.kicad_cli}")
+
+
+         
+
+
         
         # Decide which kicad-cli to call based on our OS
-        os_type = ProductionFilesGeneratorKICLI.current_os()
-        if os_type == "windows":
-            self.kicad_cli = r"C:\Program Files\KiCad\9.0\bin\kicad-cli.exe"
-            bom_script_path = r"C:\Program Files\KiCad\9.0\bin\scripting\plugins\bom_csv_grouped_by_value.py"
-            self.custom_bom_py = r"C:\Program Files\KiCad\9.0\bin\scripting\plugins/bom_csv_grouped_by_value.py"
-        elif os_type == "wsl":
-            # if you want to call the Windows exe from WSL
-            self.kicad_cli = "/mnt/c/Program Files/KiCad/9.0/bin/kicad-cli.exe"
-        else:
-            # assume it's on your $PATH (Linux/macOS install)
-            self.kicad_cli = "kicad-cli"
+        # os_type = ProductionFilesGeneratorKICLI.current_os()
+        # if os_type == "windows":
+        #     self.kicad_cli = r"C:\Program Files\KiCad\9.0\bin\kicad-cli.exe"
+        #     bom_script_path = r"C:\Program Files\KiCad\9.0\bin\scripting\plugins\bom_csv_grouped_by_value.py"
+        #     self.custom_bom_py = r"C:\Program Files\KiCad\9.0\bin\scripting\plugins/bom_csv_grouped_by_value.py"
+        # elif os_type == "wsl":
+        #     # if you want to call the Windows exe from WSL
+        #     self.kicad_cli = "/mnt/c/Program Files/KiCad/9.0/bin/kicad-cli.exe"
+        # else:
+        #     # assume it's on your $PATH (Linux/macOS install)
+        #     self.kicad_cli = "kicad-cli"
     # ─── Platform Detection ─────────────────────────────────────────
     @staticmethod
     def is_windows() -> bool:
