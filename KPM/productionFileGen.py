@@ -10,10 +10,13 @@ class ProductionFilesGeneratorKICLI:
         # self.kicad_cli = kicad_cli_path
         self.projectName = project_name
         self.projectPath = project_path
+        kicad_bom_script_name = "bom_csv_grouped_by_value.py"
 
         kicad_executable = get_app_settings()
 
         self.kicad_cli = kicad_executable.value("kicad_cli_exec", "")
+        self.kicad_bom_script = os.path.join(os.path.dirname(self.kicad_cli), "scripting", "plugins", kicad_bom_script_name)
+        self.custom_bom_py = self.kicad_bom_script
         #print(f"production_file: {self.kicad_cli}")
 
 
