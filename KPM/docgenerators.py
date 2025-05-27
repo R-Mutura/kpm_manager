@@ -98,7 +98,7 @@ class DocGeneratorKiCLI:
         print("Output PDF:", output_pdf)
 
         result = subprocess.run([
-            self.kicad_cli,
+            self.kicad_cli2,
             "sch", "export", "pdf",
             "-o", output_pdf,
             schematic_path

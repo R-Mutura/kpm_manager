@@ -9,9 +9,9 @@ from PySide6.QtCore import Qt
 
 
 class SettingsWidget(QWidget):
-    def __init__(self, project_kipath=None, parent=None):
+    def __init__(self, project_manager=None, parent=None):
         super().__init__(parent)
-        self.project_manager = project_kipath #will be used to set project settings later
+        self.project_manager = project_manager #will be used to set project settings later
         self.setWindowTitle("KiCad Project Manager Settings")
         print("the cli path is:", self.project_manager)
         self.layout = QVBoxLayout(self)
@@ -48,7 +48,7 @@ class SettingsWidget(QWidget):
         self.select_kicad_path_button = QPushButton("Select")
         self.select_kicad_path_button.setFixedWidth(200)
         self.select_kicad_path_button.clicked.connect(self.onSet_kicad_bin_path)
-        current_ki_cad_path = self.project_manager #self.project_manager.get_kicad_cli()
+        current_ki_cad_path = self.project_manager.get_kicad_cli()
         if current_ki_cad_path:
             self.kicad_bin_path_edit.setText(f"Current Kicad Dir: {current_ki_cad_path}")
         
@@ -145,8 +145,9 @@ class SettingsWidget(QWidget):
         QMessageBox.information(self, "Success", f"Valid KiCad path set:\n{cli_exe} \nand BOM script:\n{bom_scripting_py}")
         # Here you can store the path in your project manager or settings   
         if self.project_manager:
-            self.project_manager.set_kicad_cli(cli_exe, bom_scripting_py)
-            self.project_manager.save_kicad_paths_signal.emit(cli_exe, bom_scripting_py)#nothing connects to it as of now
+            #self.project_manager.set_kicad_cli(cli_exe, bom_scripting_py)
+            
+            pass #self.project_manager.save_kicad_paths_signal.emit(cli_exe, bom_scripting_py)#nothing connects to it as of now
         else:
             print(", storing path locally.")
             

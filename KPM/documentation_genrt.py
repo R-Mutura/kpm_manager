@@ -155,8 +155,15 @@ class DocumentationGenerationWidget(QWidget):
     
     def generate_report(self):
         checked_items = []
-        gen = DocGeneratorKiCLI()
-        gen.test_cli()
+        gen = DocGeneratorKiCLI(KICAD_CLI=project_manager.kicad_cli, project_name = project_manager.get_project_name(), project_path=project_manager.get_project_path())
+        
+        #gen.test_cli()
+        print("here are the project_mager_intems",project_manager.kicad_cli, project_manager.get_project_name(), project_manager.get_project_path())
+        print("here are the project_mager_items 2",self.project_name, self.project_path)
+        print("dicts", project_manager.default_states)
+        print("**here are the project_mager_intems 3:",project_manager.kicad_cli, project_manager.get_project_name(), project_manager.get_project_path())
+       
+        
         # 1. Locate the SRC folder
         src_path = None
         for root, dirs, _ in os.walk(self.project_path):

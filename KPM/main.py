@@ -17,7 +17,7 @@ import os
     #    # color schem used for icon on the  KPM logo
     # """
 # color schem used for icon on the  KPM logo
-
+from ProjectState import ProjectManager
 from global_project_manager import project_manager 
 from create_project import CreateProjectWidget
 from open_project import OpenProjectWidget
@@ -124,6 +124,7 @@ class MainWindow(QMainWindow):
             }
         """
         self.button_widgets = dict()
+        
         for label, func in self.actions.items():
             btn = QPushButton(label)
             btn.setStyleSheet(self.normal_style)
@@ -138,6 +139,7 @@ class MainWindow(QMainWindow):
             btn.clicked.connect(lambda _, b=btn, f=func: self.handle_button_click(b, f))
             left_layout.addWidget(btn)
             self.button[label] = btn
+        
             
         #load all the button related widgets to a dict / dictionary
         #this ensures that the widget is instantiated only once and called multiple times in the life of the project without issues
@@ -204,6 +206,19 @@ class MainWindow(QMainWindow):
         main_layout.addLayout(right_panel, 3)
 
         self.setCentralWidget(main_widget)
+        xproject_name=project_manager.get_project_name()
+        xproject_path=project_manager.get_project_path()
+        print(f"MMAINN ------ Project Name: {xproject_name}, Project Path: {xproject_path}")
+        #initialize the widgets for dynamic loading
+        self.button_widgets = {
+                "documentationWidget": DocumentationGenerationWidget(status_dot=self.dot, status_label=self.status_label, project_name= xproject_name, project_path= xproject_path),
+                "reviewWidget": ReviewHTMLViewerWidget(html_path, project_manager=project_manager),
+                "productionWidget": ProductionFilesGeneratorWidget(status_dot=self.dot, status_label=self.status_label,  project_name=project_manager.get_project_name(), project_path=project_manager.get_project_path()),
+                "verifyWidget": VerifyWidgetui(project_manager=project_manager),
+                "settingsWidget": SettingsWidget(project_manager=project_manager)
+                #others widgets to be loaded here
+        }
+        
     # START OF FUNTION    
     def resizeEvent(self, event):
         #resize theproject tree widget dynamically
@@ -351,14 +366,7 @@ class MainWindow(QMainWindow):
             self.project_tree_widget.load_project(path)
             self.project_tree_widget.repaint()
             #then we load all the widgets that will be used in the project hereby instantiating them once for the whole project
-            # self.button_widgets = {
-            #     "documentationWidget": DocumentationGenerationWidget(status_dot=self.dot, status_label=self.status_label, project_name=project_manager.get_project_name(), project_path=project_manager.get_project_path()),
-            #     "reviewWidget": ReviewHTMLViewerWidget(html_path, project_manager=project_manager),
-            #     "productionWidget": ProductionFilesGeneratorWidget(status_dot=self.dot, status_label=self.status_label,  project_name=project_manager.get_project_name(), project_path=project_manager.get_project_path()),
-            #     "verifyWidget": VerifyWidgetui(project_manager=project_manager),
-            #     "settingsWidget": SettingsWidget(project_kipath=project_manager.get_kicad_cli)
-            #     #others widgets to be loaded here
-            # }
+            
         else:
             self.project_tree_widget.load_project(None)
             # self.project_tree_widget.tree_widget.clear()
@@ -445,10 +453,11 @@ class MainWindow(QMainWindow):
         self.load_widget_by_key("reviewWidget","Review Project")
     
     def load_settings(self):
-        self.right_box.setTitle("Settings")
+        # self.right_box.setTitle("Settings")
         self.clear_right()
-        widget = SettingsWidget(project_kipath=project_manager.get_kicad_cli())
-        self.right_layout.addWidget(widget)
+        self.load_widget_by_key("settingsWidget","Settings")
+        # widget = SettingsWidget(project_kipath=project_manager.get_kicad_cli())
+        # self.right_layout.addWidget(widget)
         
         # self.clear_right()
         # self.load_widget_by_key("settingsWidget","Settings")

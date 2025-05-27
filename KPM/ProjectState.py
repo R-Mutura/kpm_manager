@@ -107,7 +107,7 @@ class ProjectManager(QObject, KpmDatabase):
 
     @staticmethod
     def is_linux() -> bool:
-        return platform.system() == 'Linux' and not DocGeneratorKiCLI.is_wsl()
+        return platform.system() == 'Linux' and not ProjectManager.is_wsl()
 
     @staticmethod
     def current_os() -> str:
