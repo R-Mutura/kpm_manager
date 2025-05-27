@@ -10,7 +10,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt
 
 
-from ProjectState import ProjectManager #statemanagement and synchronization.
+#from ProjectState import ProjectManager #statemanagement and synchronization.
 from docgenerators import DocGeneratorKiCLI
 from global_project_manager import project_manager
 from ui_elements.loglevel_logic import CustomLogger

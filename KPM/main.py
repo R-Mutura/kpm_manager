@@ -46,6 +46,13 @@ log_manager = CustomLogger()
 class MainWindow(QMainWindow):
     def __init__(self, db_file: str):
         super().__init__()
+        # Connect signal
+        self.loglevelselector = LogLevelWidget()
+        project_manager.log_level_change.connect(self.loglevelselector.on_selection_changed)
+        project_manager.project_changed.connect(self.on_project_changed)
+        project_manager.update_document_tree.connect(self.on_project_update)
+        project_manager.project_progress_status.connect(self.updateProjectProgress)
+              
         # Logo Label
         self.logo_widget = QWidget()
         logo_layout = QVBoxLayout(self.logo_widget)
@@ -144,11 +151,11 @@ class MainWindow(QMainWindow):
         left_layout.addWidget(self.project_tree_widget)
         
         #log level buttons to allow flexible implementation of log levels
-        loglevelselector = LogLevelWidget()
-        loglevelselector.setMinimumHeight(80)
-        loglevelselector.setMaximumHeight(120)
-        loglevelselector.setStyleSheet("background-color: #D3D3D3; border-radius: 6px; padding: 8px; text-align: left;")
-        left_layout.addWidget(loglevelselector)
+        
+        self.loglevelselector.setMinimumHeight(80)
+        self.loglevelselector.setMaximumHeight(120)
+        self.loglevelselector.setStyleSheet("background-color: #D3D3D3; border-radius: 6px; padding: 8px; text-align: left;")
+        left_layout.addWidget(self.loglevelselector)
         # add progress bar
         self.progressbarstatus = ProjectProgressWidget()
         left_layout.addWidget(self.progressbarstatus)
@@ -158,12 +165,7 @@ class MainWindow(QMainWindow):
         
         left_layout.addWidget(self.logo_widget)
         
-        # Connect signal
-        project_manager.log_level_change.connect(loglevelselector.on_selection_changed)
-        project_manager.project_changed.connect(self.on_project_changed)
-        project_manager.update_document_tree.connect(self.on_project_update)
-        project_manager.project_progress_status.connect(self.updateProjectProgress)
-                
+          
         
         
         # Status bar with dot
@@ -349,14 +351,14 @@ class MainWindow(QMainWindow):
             self.project_tree_widget.load_project(path)
             self.project_tree_widget.repaint()
             #then we load all the widgets that will be used in the project hereby instantiating them once for the whole project
-            self.button_widgets = {
-                "documentationWidget": DocumentationGenerationWidget(status_dot=self.dot, status_label=self.status_label, project_name=project_manager.get_project_name(), project_path=project_manager.get_project_path()),
-                "reviewWidget": ReviewHTMLViewerWidget(html_path, project_manager=project_manager),
-                "productionWidget": ProductionFilesGeneratorWidget(status_dot=self.dot, status_label=self.status_label,  project_name=project_manager.get_project_name(), project_path=project_manager.get_project_path()),
-                "verifyWidget": VerifyWidgetui(project_manager=project_manager),
-                "settingsWidget": SettingsWidget(project_manager=project_manager)
-                #others widgets to be loaded here
-            }
+            # self.button_widgets = {
+            #     "documentationWidget": DocumentationGenerationWidget(status_dot=self.dot, status_label=self.status_label, project_name=project_manager.get_project_name(), project_path=project_manager.get_project_path()),
+            #     "reviewWidget": ReviewHTMLViewerWidget(html_path, project_manager=project_manager),
+            #     "productionWidget": ProductionFilesGeneratorWidget(status_dot=self.dot, status_label=self.status_label,  project_name=project_manager.get_project_name(), project_path=project_manager.get_project_path()),
+            #     "verifyWidget": VerifyWidgetui(project_manager=project_manager),
+            #     "settingsWidget": SettingsWidget(project_kipath=project_manager.get_kicad_cli)
+            #     #others widgets to be loaded here
+            # }
         else:
             self.project_tree_widget.load_project(None)
             # self.project_tree_widget.tree_widget.clear()
@@ -445,7 +447,7 @@ class MainWindow(QMainWindow):
     def load_settings(self):
         self.right_box.setTitle("Settings")
         self.clear_right()
-        widget = SettingsWidget(project_manager=project_manager)
+        widget = SettingsWidget(project_kipath=project_manager.get_kicad_cli())
         self.right_layout.addWidget(widget)
         
         # self.clear_right()
@@ -473,9 +475,11 @@ if __name__ == "__main__":
     app.setOrganizationName("KPM")
     app.setApplicationName("KPM")
     #define data directory 
-    home = os.path.expanduser("~")  
+    home = os.path.expanduser("~")
+      
     # create directory if it is not there
     db_file = os.path.join(home, "kpm_projects.db")
+    
    
     
     #os.makedirs(db_file, exist_ok=True)

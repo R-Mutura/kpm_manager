@@ -4,6 +4,7 @@ import sys
 import json
 import datetime
 import platform
+import subprocess
 
 
 import PySide6.QtSql #handle database
@@ -14,7 +15,21 @@ from database_elements.mydatabase import KpmDatabase #open an instance of the da
 
 kicad_cli_name = "kicad-cli.exe"
 kicad_bom_script_name = "bom_csv_grouped_by_value.py"
+
 class ProjectManager(QObject, KpmDatabase):
+    _instance = None
+    
+    
+    
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super(ProjectManager, cls).__new__(cls)
+            cls._instance._initialized = False
+        return cls._instance
+
+    
+    
+    application_name = "KPM"  # Application name 
     # Signal emitted when project changes
      # Emit (project_name, is_open, project_path)
     #creating a signal that will be used to handle changes states and action generations here
@@ -27,6 +42,7 @@ class ProjectManager(QObject, KpmDatabase):
     #3 handle project opening and closing.
     project_changed = Signal(str, bool, str)  #updates the current project
     # Emit (project_name, is_open, project_path)
+    save_kicad_paths_signal = Signal(str, str)  # Emit (kicad_cli_path, kicad_bom_script_path)
     #*****************END OF SIGNALS DEFINITIONS************************//
     
     """the default status of the project to be defined here (signleton self implemented class so only one state of this will exists)
@@ -55,6 +71,9 @@ class ProjectManager(QObject, KpmDatabase):
         #function below will be used to set the cli path
 
     def __init__(self):
+        if self._initialized:
+            return
+        self._initialized = True
         #super().__init__() #not used in double inheritances
         QObject.__init__(self)  # Initialize QObject part
         KpmDatabase.__init__(self)  # Initialize MyDatabase part
@@ -67,7 +86,8 @@ class ProjectManager(QObject, KpmDatabase):
         self._is_open = False
         self._project_path = None
 
-        self.kicad_cli =None
+        self.kicad_cli = None
+        print("ProjectManager initialized once")
 
     
     # ─── Platform Detection ─────────────────────────────────────────
@@ -129,29 +149,33 @@ class ProjectManager(QObject, KpmDatabase):
     # ─── End of os detection scripts────────────────────────────
 
     #TODO: make these function dynamically called or available to be set by the user
-    def set_kicad_cli(self, path = None):
-        if path == None:
-            print("none")
+    def set_kicad_cli(self, kicad_cli_path = None, kicad_bom_script_path = None):
+        """Sets the path to the kicad-cli executable and the bom script."""
+        if kicad_cli_path is not None:
+            self.kicad_cli = kicad_cli_path
+            self.kicad_bom_script = kicad_bom_script_path
+            #save the paths to the json file in C:\Users\ujuzi\KPM\kicad_paths.json
+            self.kicad_cli = os.path.normpath(self.kicad_cli)
+            self.kicad_bom_script = os.path.normpath(self.kicad_bom_script)
+            # Ensure the directory exists
+            self.save_kicad_paths(kicad_cli_path, kicad_bom_script_path)
+        else:
+            self.kicad_cli = self.get_kicad_cli()
+            self.kicad_bom_script = os.path.join(os.path.dirname(self.kicad_cli), "scripting", "plugins", kicad_bom_script_name)
+                 
+            #self.kicad_bom_script = os.path.join(os.path.dirname(self.kicad_cli), "scripting", "plugins", kicad_bom_script_name)
+           
 
 
     def get_kicad_cli(self):
         # Decide which kicad-cli to call based on our OS
+        
         if self.kicad_cli == None:
-
-            os_type = ProjectManager.current_os()
-            if os_type == "windows":
-                #self.kicad_cli = r"C:\Program Files\KiCad\9.0\bin\kicad-cli.exe"
-                return r"C:\Program Files\KiCad\9.0\bin\kicad-cli.exe"
-            elif os_type == "wsl":
-                # if you want to call the Windows exe from WSL
-                #self.kicad_cli = "/mnt/c/Program Files/KiCad/9.0/bin/kicad-cli.exe"
-                return "/mnt/c/Program Files/KiCad/9.0/bin/kicad-cli.exe"
-            else:
-                # assume it's on your $PATH (Linux/macOS install)
-                #self.kicad_cli = "kicad-cli"
-                return "kicad-cli"
+            self.kicad_cli = self.read_kicad_json()
+            self.kicad_bom_script = os.path.join(os.path.dirname(self.kicad_cli), "scripting", "plugins", kicad_bom_script_name)
+            return self.kicad_cli
         else:
-            return kicad_cli
+            return None
         
     def set_project(self,  name: str, path: str):
         self._project_name = name
@@ -174,6 +198,42 @@ class ProjectManager(QObject, KpmDatabase):
     def is_project_open(self):
         return self._is_open
     
+    def save_kicad_paths(self, kicad_cli_path: str, kicad_bom_script_path: str):
+        #application_name
+        home = os.path.expanduser("~")
+        application_dir = os.path.join(home, self.application_name)
+        if not os.path.exists(application_dir):
+            os.makedirs(application_dir)
+        
+        application_info_path = os.path.join(application_dir, "kicad_paths.json")
+        
+        paths = {
+            "kicad_cli": kicad_cli_path,
+            "kicad_bom_script": kicad_bom_script_path
+        }
+        with open(application_info_path, "w") as f:
+            json.dump(paths, f, indent=4)
     
+        print(f"Saved KiCad paths to kicad_paths.json: {paths}")
+        
+        
+    def read_kicad_json(self) -> str:
+        """Loads and returns the KiCad CLI path from the saved JSON configuration."""
+        home = os.path.expanduser("~")
+        application_dir = os.path.join(home, self.application_name)
+        application_info_path = os.path.join(application_dir, "kicad_paths.json")
 
+        if not os.path.isfile(application_info_path):
+            print( "Missing File", "No saved KiCad path found. Please configure the path.")
+            return ""
 
+        try:
+            with open(application_info_path, "r") as f:
+                data = json.load(f)
+                return data.get("kicad_cli", "")
+        except json.JSONDecodeError:
+            print( "Corrupt File", "The KiCad path file is corrupted. Please reconfigure.")
+            return ""
+        except Exception as e:
+            print("Error", f"Failed to load KiCad CLI path: {e}")
+            return ""

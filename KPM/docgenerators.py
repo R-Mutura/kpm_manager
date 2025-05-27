@@ -6,10 +6,11 @@ import platform
 import subprocess
 
 class DocGeneratorKiCLI:
-    def __init__(self, project_name=None, project_path=None):
+    def __init__(self, KICAD_CLI: str = None, project_name=None, project_path: str = None):
         self.projectName = project_name
         self.projectPath = project_path
-
+        self.kicad_cli2 = KICAD_CLI
+        
         # Decide which kicad-cli to call based on our OS
         os_type = DocGeneratorKiCLI.current_os()
         if os_type == "windows":

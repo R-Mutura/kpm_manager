@@ -232,6 +232,18 @@ class KpmDatabase:
             db.close()
             QSqlDatabase.removeDatabase(name)
 
+    def kicad_paths_saving(self, program_manager):
+        #handle the kicad paths
+        pass
+    
+    def kicad_paths_loading(self, program_manager):
+        #load the kicad paths from a storage files 
+        #the default storage files for this is in the user home directory
+        # that is in wundows: C:\Users\<username>\KPM\kicad_paths.json
+        
+        pass
+    
+
 # --- Main Window --------------------------------------------------------
 
 class MainWindow(QMainWindow):
